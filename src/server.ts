@@ -60,7 +60,7 @@ app.use((req, res, next) => {
   });
   next();
 });
-const port = 3003;
+const port = process.env.PORT || 3003;
 
 // Routes
 app.get("/source/:hashBase64URL", async (req, res) => {
