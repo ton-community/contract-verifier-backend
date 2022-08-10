@@ -9,7 +9,6 @@ import { initFirebase } from "./lib/firebase-initializer";
 import multer from "multer";
 import { readFile, rm } from "fs/promises";
 import mkdirp from "mkdirp";
-import firebaseConfig from "../secrets/firebase-dev-shahar.json";
 import { FirestoreSourcesDB } from "./lib/storage/db/firestore-source-db-provider";
 import { FuncSourceVerifier } from "./lib/compiler/func-source-verifier";
 import { rmSync } from "fs";
