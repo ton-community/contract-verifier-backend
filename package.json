@@ -11,6 +11,7 @@
     "firebase": "^9.9.1",
     "firebase-admin": "^11.0.0",
     "gcs-resumable-upload": "^5.0.0",
+    "ipfs-http-client": "^57.0.3",
     "ipfs-only-hash": "^4.0.0",
     "mkdirp": "^1.0.4",
     "multer": "^1.4.5-lts.1",
