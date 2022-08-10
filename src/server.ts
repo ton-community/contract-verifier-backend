@@ -1,5 +1,6 @@
 import express from "express";
 require("express-async-errors");
+require("dotenv").config();
 
 import cors from "cors";
 import { Controller } from "./lib/controller";
@@ -8,14 +9,16 @@ import { initFirebase } from "./lib/firebase-initializer";
 import multer from "multer";
 import { readFile, rm } from "fs/promises";
 import mkdirp from "mkdirp";
-import firebaseConfig from "../secrets/firebase-dev-shahar.json";
+// import firebaseConfig from "../secrets/firebase-dev-shahar.json";
 import { FirestoreSourcesDB } from "./lib/storage/db/firestore-source-db-provider";
 import { FuncSourceVerifier } from "./lib/compiler/func-source-verifier";
 import { rmSync } from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
 import idMiddleware from "./req-id-middleware";
-const firebaseApp = initFirebase(firebaseConfig);
+
+// TODO productionize
+const firebaseApp = initFirebase(JSON.parse(process.env.FIREBASE_SECRET!));
 
 const controller = new Controller(
   new FirebaseCodeStorageProvider(firebaseApp, {

@@ -1,13 +1,9 @@
 import { CodeStorageProvider } from "./storage/code/code-storage-provider";
-import { VerifyResult } from "../../../ton-src-web/src/server-types/server-types";
-import {
-  SourcesDB,
-  ReturnedSource,
-  DBSource,
-} from "./storage/db/source-db-provider";
+import { SourcesDB, ReturnedSource } from "./storage/db/source-db-provider";
 import {
   SourceVerifier,
   SourceVerifyPayload,
+  VerifyResult,
 } from "./compiler/source-verifier";
 import path from "path";
 
