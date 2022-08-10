@@ -4,6 +4,7 @@
     "@babel/preset-env": "^7.18.6",
     "base64url": "^3.0.1",
     "cors": "^2.8.5",
+    "dotenv": "^16.0.1",
     "express": "^4.18.1",
     "express-async-errors": "^3.1.1",
     "express-request-id": "^2.0.1",
@@ -16,9 +17,9 @@
     "ton": "^12.0.0"
   },
   "scripts": {
-    "prebuild": "tslint -c tslint.json -p tsconfig.json --fix",
+    "__prebuild": "tslint -p tsconfig.json --fix",
     "build": "tsc",
-    "prestart": "npm run build",
+    "__prestart": "npm run build",
     "start": "node dist/server",
     "test": "jest --timeout 30000"
   },
@@ -34,5 +35,8 @@
     "jest-mock-extended": "^2.0.7",
     "ts-jest": "^28.0.7",
     "tslint": "^6.1.3"
+  },
+  "engines": {
+    "node": "16.x"
   }
 }
