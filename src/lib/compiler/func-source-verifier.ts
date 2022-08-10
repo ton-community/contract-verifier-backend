@@ -26,7 +26,8 @@ function randomStr(length: number) {
 const funcCompilers: { [key in FUNC_COMPILER_VERSION]: string } = {
   "0.0.9": "./binaries/func.0.0.9", // [ Commit: 9875f02ef4ceba5b065d5e63c920f91aec73224e, Date: 2021-11-08 00:10:10 +0300]
   "0.1.0": "./binaries/func.0.1.0", //  [ Commit: 5b9345263efdb78a9723c4f11409eced14912a71, Date: 2021-12-28 14:41:44 +0200]
-  "0.2.0": "./binaries/func.0.2.0", // [ Commit: db3619ed310484fcfa4e3565be8e10458f9f2f5f, Date: 2022-05-17 15:56:31 +0300]
+  // TODO restore "0.2.0": "./binaries/func.0.2.0", // [ Commit: db3619ed310484fcfa4e3565be8e10458f9f2f5f, Date: 2022-05-17 15:56:31 +0300]
+  "0.2.0": "func", // [ Commit: db3619ed310484fcfa4e3565be8e10458f9f2f5f, Date: 2022-05-17 15:56:31 +0300]
 };
 
 async function compileFuncToCodeHash(
