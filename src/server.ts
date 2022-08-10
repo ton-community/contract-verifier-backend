@@ -9,7 +9,7 @@ import { initFirebase } from "./lib/firebase-initializer";
 import multer from "multer";
 import { readFile, rm } from "fs/promises";
 import mkdirp from "mkdirp";
-// import firebaseConfig from "../secrets/firebase-dev-shahar.json";
+import firebaseConfig from "../secrets/firebase-dev-shahar.json";
 import { FirestoreSourcesDB } from "./lib/storage/db/firestore-source-db-provider";
 import { FuncSourceVerifier } from "./lib/compiler/func-source-verifier";
 import { rmSync } from "fs";
@@ -17,9 +17,13 @@ import path from "path";
 import { randomUUID } from "crypto";
 import idMiddleware from "./req-id-middleware";
 
-// TODO productionize
-const firebaseApp = initFirebase(JSON.parse(process.env.FIREBASE_SECRET!));
+const firebaseSecret = JSON.parse(
+  Buffer.from(process.env.FIREBASE_SECRET!, "base64").toString()
+);
 
+const firebaseApp = initFirebase(firebaseSecret);
+
+// TODO productionize
 const controller = new Controller(
   new FirebaseCodeStorageProvider(firebaseApp, {
     bucketName: "my-something-proj-something.appspot.com",
