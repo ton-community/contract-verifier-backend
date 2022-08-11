@@ -15,7 +15,7 @@ import { rmSync } from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
 import idMiddleware from "./req-id-middleware";
-import { IpfsCodeStorageProvider } from "./lib/storage/code/infura-ipfs-code-storage-provider";
+import { IpfsCodeStorageProvider } from "./lib/storage/code/ipfs-code-storage-provider";
 
 const firebaseSecret = JSON.parse(
   Buffer.from(process.env.FIREBASE_SECRET!, "base64").toString()
