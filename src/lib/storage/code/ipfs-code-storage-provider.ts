@@ -25,7 +25,7 @@ export class IpfsCodeStorageProvider implements CodeStorageProvider {
   }
 
   async write(...files: FileUploadSpec[]): Promise<string[]> {
-    const cids = await Promise.all(
+    return Promise.all(
       files.map((f) =>
         this.#client.add({ content: fs.createReadStream(f.path) }).then((r) => {
           console.log("uploaded", f.name);
@@ -33,8 +33,6 @@ export class IpfsCodeStorageProvider implements CodeStorageProvider {
         })
       )
     );
-
-    return cids;
   }
 
   async read(pointer: string): Promise<string> {
