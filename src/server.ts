@@ -4,7 +4,6 @@ require("dotenv").config();
 
 import cors from "cors";
 import { Controller } from "./lib/controller";
-import { FirebaseCodeStorageProvider } from "./lib/storage/code/firebase-code-storage-provider";
 import { initFirebase } from "./lib/firebase-initializer";
 import multer from "multer";
 import { readFile, rm } from "fs/promises";
@@ -15,6 +14,7 @@ import { rmSync } from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
 import idMiddleware from "./req-id-middleware";
+import { IpfsCodeStorageProvider } from "./lib/storage/code/ipfs-code-storage-provider";
 
 const firebaseSecret = JSON.parse(
   Buffer.from(process.env.FIREBASE_SECRET!, "base64").toString()
@@ -22,12 +22,8 @@ const firebaseSecret = JSON.parse(
 
 const firebaseApp = initFirebase(firebaseSecret);
 
-// TODO productionize
 const controller = new Controller(
-  new FirebaseCodeStorageProvider(firebaseApp, {
-    bucketName: "my-something-proj-something.appspot.com",
-    keyFile: "secrets/firebase-dev-shahar.json",
-  }),
+  new IpfsCodeStorageProvider(),
   new FirestoreSourcesDB(firebaseApp),
   new FuncSourceVerifier()
 );
