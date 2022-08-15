@@ -44,7 +44,11 @@ async function compileFuncToCodeHash(
     .map((f) => f.path)
     .join(" ")}`;
 
-  await execAsync(funcCmd);
+  const { stderr } = await execAsync(funcCmd);
+  if (stderr) {
+    throw new Error(stderr);
+  }
+
   const codeCell = await fiftToCodeCell(fiftOutFile, tmpDir);
   console.log({ funcCmd, codeHash: codeCell.hash().toString("base64") });
 
@@ -58,11 +62,7 @@ async function fiftToCodeCell(fiftFile: string, tmpDir: string) {
 boc>B "${b64OutFile}" B>file`;
 
   const tmpB64Fift = path.join(tmpDir, `${randomStr(10)}.cell.tmp.fif`);
-  try {
-    await writeFile(tmpB64Fift, fiftCellSource);
-  } catch (e) {
-    console.log(e);
-  }
+  await writeFile(tmpB64Fift, fiftCellSource);
 
   await execAsync(`fift -s ${tmpB64Fift}`);
   // await unlink(fiftCellSource);
