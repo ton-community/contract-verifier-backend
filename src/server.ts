@@ -15,6 +15,7 @@ import path from "path";
 import { randomUUID } from "crypto";
 import idMiddleware from "./req-id-middleware";
 import { IpfsCodeStorageProvider } from "./lib/storage/code/ipfs-code-storage-provider";
+import rateLimit from "express-rate-limit";
 
 const firebaseSecret = JSON.parse(
   Buffer.from(process.env.FIREBASE_SECRET!, "base64").toString()
@@ -32,6 +33,13 @@ const app = express();
 app.use(idMiddleware());
 app.use(cors());
 app.use(express.json());
+
+const limiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: 25, // Limit each IP to 25 requests per `window`
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
 
 // Set up file handling
 const TMP_DIR = "./tmp";
@@ -69,6 +77,7 @@ app.get("/source/:hashBase64URL", async (req, res) => {
 
 app.post(
   "/source",
+  limiter,
   async (req, res, next) => {
     await mkdirp(path.join(TMP_DIR, req.id));
     next();
