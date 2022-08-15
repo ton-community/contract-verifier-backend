@@ -30,19 +30,45 @@ const funcCompilers: { [key in FUNC_COMPILER_VERSION]: string } = {
   "0.2.0": "func", // [ Commit: db3619ed310484fcfa4e3565be8e10458f9f2f5f, Date: 2022-05-17 15:56:31 +0300]
 };
 
+function prepareFuncCommand(
+  executable: string,
+  funcArgs: string,
+  fiftOutFile: string,
+  funcFiles: SourceToVerify[],
+  forExport: boolean
+) {
+  const getPath = (_path: string) => (forExport ? path.basename(_path) : _path);
+
+  return [
+    getPath(executable),
+    funcArgs,
+    "-o",
+    getPath(fiftOutFile),
+    "-SPA",
+    funcFiles
+      .filter((f) => f.includeInCompile)
+      .map((f) => getPath(f.path))
+      .join(" "),
+  ]
+    .filter((c) => c)
+    .join(" ");
+}
+
 async function compileFuncToCodeHash(
   funcCompiler: FUNC_COMPILER_VERSION,
   funcArgs: string,
   funcFiles: SourceToVerify[],
   tmpDir: string
 ) {
-  const out = randomStr(10);
-  const fiftOutFile = path.join(tmpDir, `${out}.fif`);
+  const fiftOutFile = path.join(tmpDir, "output.fif");
   const executable = funcCompilers[funcCompiler];
-  const funcCmd = `${executable} ${funcArgs} -o ${fiftOutFile} -SPA ${funcFiles
-    .filter((f) => f.includeInCompile)
-    .map((f) => f.path)
-    .join(" ")}`;
+  const funcCmd = prepareFuncCommand(
+    executable,
+    funcArgs,
+    fiftOutFile,
+    funcFiles,
+    false
+  );
 
   const { stderr } = await execAsync(funcCmd);
   if (stderr) {
@@ -52,7 +78,16 @@ async function compileFuncToCodeHash(
   const codeCell = await fiftToCodeCell(fiftOutFile, tmpDir);
   console.log({ funcCmd, codeHash: codeCell.hash().toString("base64") });
 
-  return codeCell.hash().toString("base64");
+  return {
+    hash: codeCell.hash().toString("base64"),
+    funcCmd: prepareFuncCommand(
+      executable,
+      funcArgs,
+      fiftOutFile,
+      funcFiles,
+      true
+    ),
+  };
 }
 
 async function fiftToCodeCell(fiftFile: string, tmpDir: string) {
@@ -77,13 +112,18 @@ export class FuncSourceVerifier implements SourceVerifier {
   async verify(payload: SourceVerifyPayload): Promise<VerifyResult> {
     console.log(payload);
 
+    let funcCmd: string | null = null;
+
     try {
-      const codeCellHash = await compileFuncToCodeHash(
-        payload.version,
-        "",
-        payload.sources,
-        payload.tmpDir
-      );
+      const { hash: codeCellHash, funcCmd: _funcCmd } =
+        await compileFuncToCodeHash(
+          payload.version,
+          "",
+          payload.sources,
+          payload.tmpDir
+        );
+
+      funcCmd = _funcCmd;
 
       return {
         hash: codeCellHash,
@@ -92,9 +132,15 @@ export class FuncSourceVerifier implements SourceVerifier {
             ? "similar"
             : "not_similar",
         error: null,
+        funcCmd,
       };
     } catch (e) {
-      return { result: "unknown_error", error: e.toString(), hash: null };
+      return {
+        result: "unknown_error",
+        error: e.toString(),
+        hash: null,
+        funcCmd,
+      };
     }
   }
 }

@@ -72,7 +72,7 @@ export class Controller {
     );
 
     await this.#sourcesDB.add({
-      compileCommandLine: verificationPayload.compileCommandLine,
+      compileCommandLine: verificationResult.funcCmd,
       compiler: verificationPayload.compiler,
       version: verificationPayload.version,
       hash: verificationResult.hash,

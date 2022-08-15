@@ -11,6 +11,7 @@ export type VerifyResult = {
   result: "similar" | "not_similar" | "compile_error" | "unknown_error";
   error: string | null;
   hash: string | null;
+  funcCmd: string | null;
 };
 
 type Path = string;
