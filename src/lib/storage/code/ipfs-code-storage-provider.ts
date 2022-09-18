@@ -23,6 +23,16 @@ export class IpfsCodeStorageProvider implements CodeStorageProvider {
       },
     });
   }
+  
+  writeFromContent(...files: Buffer[]): Promise<string[]> {
+    return Promise.all(
+      files.map((f) =>
+        this.#client.add({ content: f }).then((r) => {
+          return r.cid.toString();
+        })
+      )
+    );
+  }
 
   async write(...files: FileUploadSpec[]): Promise<string[]> {
     return Promise.all(

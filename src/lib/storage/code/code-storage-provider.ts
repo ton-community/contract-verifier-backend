@@ -9,6 +9,7 @@ export type FileUploadSpec = {
 
 export interface CodeStorageProvider {
   write(...files: FileUploadSpec[]): Promise<CodeLocationPointer[]>;
+  writeFromContent(...files: Buffer[]): Promise<CodeLocationPointer[]>;
   // Returns URL
   read(pointer: CodeLocationPointer): Promise<string>;
 }

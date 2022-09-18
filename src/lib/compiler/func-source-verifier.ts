@@ -8,7 +8,7 @@ import {
   FUNC_COMPILER_VERSION,
   SourceVerifier,
   SourceVerifyPayload,
-  VerifyResult,
+  CompileResult,
 } from "./source-verifier";
 import path from "path";
 
@@ -109,7 +109,7 @@ boc>B "${b64OutFile}" B>file`;
 
 export class FuncSourceVerifier implements SourceVerifier {
   // TODO!
-  async verify(payload: SourceVerifyPayload): Promise<VerifyResult> {
+  async verify(payload: SourceVerifyPayload): Promise<CompileResult> {
     console.log(payload);
 
     let funcCmd: string | null = null;
