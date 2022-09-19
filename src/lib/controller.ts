@@ -11,8 +11,13 @@ import tweetnacl from "tweetnacl";
 import { VerifyResult } from "./compiler/source-verifier";
 import { Address, beginCell } from "ton";
 import BN from "bn.js";
+import crypto from "crypto";
 
 export type Base64URL = string;
+
+function sha256(s: string): Buffer {
+  return crypto.createHash("sha256").update(s).digest();
+}
 
 export class Controller {
   #codeStorageProvider: CodeStorageProvider;
@@ -119,17 +124,13 @@ export class Controller {
         beginCell()
           .storeUint(0x1, 32)
           .storeUint(0, 64)
-          .storeUint(0, 8) // TODO verifier id
+          .storeBuffer(sha256("orbs.com"))
           .storeUint(new BN(Buffer.from(compileResult.hash!, "base64")), 256)
           .storeRef(
             // BEGIN: source item content cell
             beginCell()
               // TODO support snakes
-              .storeRef(
-                beginCell()
-                  .storeBuffer(Buffer.from(`ipfs://${ipfsLink}`))
-                  .endCell()
-              )
+              .storeBuffer(Buffer.from(`ipfs://${ipfsLink}`))
               .endCell()
           )
           .endCell()
