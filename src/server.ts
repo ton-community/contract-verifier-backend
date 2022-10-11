@@ -104,6 +104,7 @@ app.post(
       knownContractAddress: body.knownContractAddress,
       knownContractHash: body.knownContractHash,
       tmpDir: path.join(TMP_DIR, req.id),
+      senderAddress: body.senderAddress
     });
 
     res.json(result);

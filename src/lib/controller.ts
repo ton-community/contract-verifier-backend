@@ -95,8 +95,8 @@ export class Controller {
       knownContractAddress: verificationPayload.knownContractAddress,
       verificationDate: Date.now(),
       sources: fileLocators.map((f, i) => ({
-        codeLocationPointer: f,
-        originalFilename: sourcesToUpload[i].name,
+        url: f,
+        filename: sourcesToUpload[i].name,
         hasIncludeDirectives:
           verificationPayload.sources[i].hasIncludeDirectives,
         includeInCompile: verificationPayload.sources[i].includeInCompile,
@@ -113,24 +113,28 @@ export class Controller {
 
     // await this.#sourcesDB.add();
 
-    const now = Math.floor(Date.now() / 1000);
+    const verifier = sha256("orbs3.com");
+
+    const validUntil = Math.floor(Date.now() / 1000) + 60 * 10;
 
     // This is the message that will be forwarded to verifier registry
-    const cell = beginCell()
-      .storeUint(now, 32)
+    const msgCell = beginCell()
+      .storeBuffer(verifier)
+      .storeUint(validUntil, 32)
+      .storeAddress(Address.parse(verificationPayload.senderAddress))
       .storeAddress(Address.parse(process.env.SOURCES_REGISTRY!))
       .storeRef(
         // BEGIN: message to sources registry
         beginCell()
           .storeUint(0x1, 32)
           .storeUint(0, 64)
-          .storeBuffer(sha256("orbs.com"))
+          .storeBuffer(verifier)
           .storeUint(new BN(Buffer.from(compileResult.hash!, "base64")), 256)
           .storeRef(
             // BEGIN: source item content cell
             beginCell()
               // TODO support snakes
-              .storeBuffer(Buffer.from(`ipfs://${ipfsLink}`))
+              .storeBuffer(Buffer.from(ipfsLink[0]))
               .endCell()
           )
           .endCell()
@@ -138,14 +142,25 @@ export class Controller {
       .endCell();
 
     const sig = Buffer.from(
-      tweetnacl.sign.detached(cell.hash(), this.#keypair.secretKey)
+      tweetnacl.sign.detached(msgCell.hash(), this.#keypair.secretKey)
     );
+
+    const sigCell = beginCell()
+      .storeBuffer(sig)
+      .storeBuffer(Buffer.from(this.#keypair.publicKey))
+      .endCell();
 
     return {
       compileResult,
       sig: sig.toString("base64"),
       ipfsLink: ipfsLink[0],
-      msgCell: beginCell().storeBuffer(sig).storeRef(cell).endCell().toBoc(),
+      msgCell: beginCell()
+        .storeUint(0x75217758, 32)
+        .storeUint(0, 64)
+        .storeRef(msgCell)
+        .storeRef(sigCell)
+        .endCell()
+        .toBoc(),
     };
   }
 }

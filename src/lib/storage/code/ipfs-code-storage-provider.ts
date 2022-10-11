@@ -23,12 +23,12 @@ export class IpfsCodeStorageProvider implements CodeStorageProvider {
       },
     });
   }
-  
+
   writeFromContent(...files: Buffer[]): Promise<string[]> {
     return Promise.all(
       files.map((f) =>
         this.#client.add({ content: f }).then((r) => {
-          return r.cid.toString();
+          return `ipfs://${r.cid.toString()}`;
         })
       )
     );
@@ -39,7 +39,7 @@ export class IpfsCodeStorageProvider implements CodeStorageProvider {
       files.map((f) =>
         this.#client.add({ content: fs.createReadStream(f.path) }).then((r) => {
           console.log("uploaded", f.name);
-          return r.cid.toString();
+          return `ipfs://${r.cid.toString()}`;
         })
       )
     );

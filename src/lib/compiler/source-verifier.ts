@@ -36,4 +36,5 @@ export type SourceVerifyPayload = CompileOptions & {
   knownContractAddress: string;
   knownContractHash: string;
   tmpDir: string;
+  senderAddress: string;
 };
