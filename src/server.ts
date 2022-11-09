@@ -13,13 +13,16 @@ import path from "path";
 import idMiddleware from "./req-id-middleware";
 import { IpfsCodeStorageProvider } from "./ipfs-code-storage-provider";
 import rateLimit from "express-rate-limit";
-
-const controller = new Controller(new IpfsCodeStorageProvider(), new FuncSourceVerifier());
+import { checkEnvVars } from "./check-env-vars";
 
 const app = express();
 app.use(idMiddleware());
 app.use(cors());
 app.use(express.json());
+
+checkEnvVars();
+
+const controller = new Controller(new IpfsCodeStorageProvider(), new FuncSourceVerifier());
 
 const limiter = rateLimit({
   windowMs: 5 * 60 * 1000, // 5 minutes
