@@ -3,29 +3,19 @@ require("express-async-errors");
 require("dotenv").config();
 
 import cors from "cors";
-import { Controller } from "./lib/controller";
-import { initFirebase } from "./lib/firebase-initializer";
+import { Controller } from "./controller";
 import multer from "multer";
 import { readFile, rm } from "fs/promises";
 import mkdirp from "mkdirp";
-import { FirestoreSourcesDB } from "./lib/storage/db/firestore-source-db-provider";
-import { FuncSourceVerifier } from "./lib/compiler/func-source-verifier";
+import { FuncSourceVerifier } from "./func-source-verifier";
 import { rmSync } from "fs";
 import path from "path";
-import { randomUUID } from "crypto";
 import idMiddleware from "./req-id-middleware";
-import { IpfsCodeStorageProvider } from "./lib/storage/code/ipfs-code-storage-provider";
+import { IpfsCodeStorageProvider } from "./ipfs-code-storage-provider";
 import rateLimit from "express-rate-limit";
-
-const firebaseSecret = JSON.parse(
-  Buffer.from(process.env.FIREBASE_SECRET!, "base64").toString()
-);
-
-const firebaseApp = initFirebase(firebaseSecret);
 
 const controller = new Controller(
   new IpfsCodeStorageProvider(),
-  new FirestoreSourcesDB(firebaseApp),
   new FuncSourceVerifier()
 );
 
@@ -47,8 +37,15 @@ rmSync(TMP_DIR, { recursive: true, force: true });
 
 const upload = multer({
   storage: multer.diskStorage({
-    destination: (req, file, callback) => {
-      callback(null, path.join(TMP_DIR, req.id));
+    destination: async (req, file, callback) => {
+      const _path = path.join(
+        TMP_DIR,
+        req.id,
+        file.fieldname.match(/\//) ? file.fieldname.split("/")[0] : ""
+      );
+
+      await mkdirp(_path);
+      callback(null, _path);
     },
     filename: (req, file, callback) => {
       callback(null, file.originalname);
@@ -67,23 +64,15 @@ app.use((req, res, next) => {
 const port = process.env.PORT || 3003;
 
 // Routes
-app.get("/source/:hashBase64URL", async (req, res) => {
-  const data = await controller.getSource(req.params.hashBase64URL);
-  if (!data) {
-    return res.status(404).end();
-  }
-  res.json(data);
-});
-
 app.post(
   "/source",
   limiter,
-  async (req, res, next) => {
+  async (req, _, next) => {
     await mkdirp(path.join(TMP_DIR, req.id));
     next();
   },
   upload.any(),
-  async (req, res, next) => {
+  async (req, res) => {
     const jsonFile = (req.files! as any[]).find(
       (f) => f.fieldname === "json"
     ).path;
@@ -94,17 +83,17 @@ app.post(
     const result = await controller.addSource({
       compiler: body.compiler,
       version: body.version,
-      compileCommandLine: body.compileCommandLine, // TODO sanitize
+      commandLine: body.commandLine, // TODO sanitize
       sources: (req.files! as any[])
         .filter((f: any) => f.fieldname !== "json")
         .map((f, i) => ({
-          path: f.path,
+          path: f.fieldname,
           ...body.sources[i],
         })),
       knownContractAddress: body.knownContractAddress,
       knownContractHash: body.knownContractHash,
       tmpDir: path.join(TMP_DIR, req.id),
-      senderAddress: body.senderAddress
+      senderAddress: body.senderAddress,
     });
 
     res.json(result);
@@ -112,5 +101,5 @@ app.post(
 );
 
 app.listen(port, () => {
-  console.log(`Ton sources server running on ${port}`);
+  console.log(`Ton Contract Verifier Server running on ${port}`);
 });

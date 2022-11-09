@@ -23,7 +23,7 @@
     "__prebuild": "tslint -p tsconfig.json --fix",
     "build": "tsc",
     "__prestart": "npm run build",
-    "start": "node dist/server",
+    "start": "ts-node src/server.ts",
     "test": "jest --timeout 30000"
   },
   "devDependencies": {
