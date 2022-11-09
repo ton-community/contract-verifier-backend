@@ -24,7 +24,6 @@
     "build": "tsc",
     "__prestart": "npm run build",
     "start": "ts-node src/server.ts",
-    "test": "jest --timeout 30000",
     "prepare": "husky install"
   },
   "devDependencies": {
