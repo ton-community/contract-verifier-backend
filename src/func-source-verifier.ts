@@ -3,19 +3,12 @@ import { exec } from "child_process";
 const execAsync = promisify(exec);
 import { readFile, writeFile } from "fs/promises";
 import { Cell } from "ton";
-import { SourceToVerify } from "./source-verifier";
-import {
-  FUNC_COMPILER_VERSION,
-  SourceVerifier,
-  SourceVerifyPayload,
-  VerifyResult,
-} from "./source-verifier";
+import { FUNC_COMPILER_VERSION, SourceVerifier, SourceVerifyPayload, CompileResult } from "./types";
 import path from "path";
 
 function randomStr(length: number) {
   let result = "";
-  const characters =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   const charactersLength = characters.length;
   for (let i = 0; i < length; i++) {
     result += characters.charAt(Math.floor(Math.random() * charactersLength));
@@ -34,22 +27,14 @@ function prepareFuncCommand(
   executable: string,
   funcArgs: string,
   fiftOutFile: string,
-  funcFiles: SourceToVerify[],
-  forExport: boolean
+  commandLine: string,
 ) {
-  const getPath = (_path: string) => (forExport ? path.basename(_path) : _path);
+  if (/[;>&]/.test(commandLine)) {
+    throw new Error("Unallowed special characters in command line");
+  }
+  const getPath = (_path: string) => _path;
 
-  return [
-    getPath(executable),
-    funcArgs,
-    "-o",
-    getPath(fiftOutFile),
-    "-SPA",
-    funcFiles
-      .filter((f) => f.includeInCompile)
-      .map((f) => getPath(f.path))
-      .join(" "),
-  ]
+  return [getPath(executable), funcArgs, "-o", getPath(fiftOutFile), commandLine]
     .filter((c) => c)
     .join(" ");
 }
@@ -57,36 +42,23 @@ function prepareFuncCommand(
 async function compileFuncToCodeHash(
   funcCompiler: FUNC_COMPILER_VERSION,
   funcArgs: string,
-  funcFiles: SourceToVerify[],
-  tmpDir: string
+  commandLine: string,
+  tmpDir: string,
 ) {
-  const fiftOutFile = path.join(tmpDir, "output.fif");
+  const fiftOutFile = "output.fif";
   const executable = funcCompilers[funcCompiler];
-  const funcCmd = prepareFuncCommand(
-    executable,
-    funcArgs,
-    fiftOutFile,
-    funcFiles,
-    false
-  );
+  const funcCmd = prepareFuncCommand(executable, funcArgs, fiftOutFile, commandLine);
 
-  const { stderr } = await execAsync(funcCmd);
+  const { stderr } = await execAsync(funcCmd, { cwd: tmpDir });
   if (stderr) {
     throw new Error(stderr);
   }
 
   const codeCell = await fiftToCodeCell(fiftOutFile, tmpDir);
-  console.log({ funcCmd, codeHash: codeCell.hash().toString("base64") });
 
   return {
     hash: codeCell.hash().toString("base64"),
-    funcCmd: prepareFuncCommand(
-      executable,
-      funcArgs,
-      fiftOutFile,
-      funcFiles,
-      true
-    ),
+    funcCmd,
   };
 }
 
@@ -109,28 +81,22 @@ boc>B "${b64OutFile}" B>file`;
 
 export class FuncSourceVerifier implements SourceVerifier {
   // TODO!
-  async verify(payload: SourceVerifyPayload): Promise<VerifyResult> {
-    console.log(payload);
-
+  async verify(payload: SourceVerifyPayload): Promise<CompileResult> {
     let funcCmd: string | null = null;
 
     try {
-      const { hash: codeCellHash, funcCmd: _funcCmd } =
-        await compileFuncToCodeHash(
-          payload.version,
-          "",
-          payload.sources,
-          payload.tmpDir
-        );
+      const { hash: codeCellHash, funcCmd: _funcCmd } = await compileFuncToCodeHash(
+        payload.version,
+        "",
+        payload.commandLine,
+        payload.tmpDir,
+      );
 
       funcCmd = _funcCmd;
 
       return {
         hash: codeCellHash,
-        result:
-          codeCellHash === payload.knownContractHash
-            ? "similar"
-            : "not_similar",
+        result: codeCellHash === payload.knownContractHash ? "similar" : "not_similar",
         error: null,
         funcCmd,
       };
