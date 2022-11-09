@@ -1,4 +1,4 @@
-import { SourceVerifier, SourceVerifyPayload, SourceToVerify } from "./types";
+import { SourceVerifier, SourceVerifyPayload, SourceToVerify, CompileResult } from "./types";
 import path from "path";
 import tweetnacl from "tweetnacl";
 import { VerifyResult } from "./types";
@@ -101,20 +101,14 @@ export class Controller {
     const queryId = random64BitNumber();
 
     // This is the message that will be forwarded to verifier registry
-    const msgToSign = beginCell()
-      .storeBuffer(this.#VERIFIER_SHA256)
-      .storeUint(Math.floor(Date.now() / 1000) + 60 * 10, 32) // Valid until 10 minutes from now
-      .storeAddress(Address.parse(verificationPayload.senderAddress))
-      .storeAddress(Address.parse(process.env.SOURCES_REGISTRY!))
-      .storeRef(deploySource(queryId, compileResult.hash, ipfsLink, this.#VERIFIER_SHA256))
-      .endCell();
+    const msgToSign = this.cellToSign(
+      verificationPayload.senderAddress,
+      queryId,
+      compileResult.hash!,
+      ipfsLink,
+    );
 
-    const sig = Buffer.from(tweetnacl.sign.detached(msgToSign.hash(), this.#keypair.secretKey));
-
-    const sigCell = beginCell()
-      .storeBuffer(sig)
-      .storeBuffer(Buffer.from(this.#keypair.publicKey))
-      .endCell();
+    const { sig, sigCell } = this.signatureCell(msgToSign);
 
     return {
       compileResult,
@@ -122,5 +116,25 @@ export class Controller {
       ipfsLink: ipfsLink,
       msgCell: verifierRegistryForwardMessage(queryId, msgToSign, sigCell),
     };
+  }
+
+  private signatureCell(msgToSign: Cell) {
+    const sig = Buffer.from(tweetnacl.sign.detached(msgToSign.hash(), this.#keypair.secretKey));
+
+    const sigCell = beginCell()
+      .storeBuffer(sig)
+      .storeBuffer(Buffer.from(this.#keypair.publicKey))
+      .endCell();
+    return { sig, sigCell };
+  }
+
+  private cellToSign(senderAddress: string, queryId: BN, codeCellHash: string, ipfsLink: string) {
+    return beginCell()
+      .storeBuffer(this.#VERIFIER_SHA256)
+      .storeUint(Math.floor(Date.now() / 1000) + 60 * 10, 32) // Valid until 10 minutes from now
+      .storeAddress(Address.parse(senderAddress))
+      .storeAddress(Address.parse(process.env.SOURCES_REGISTRY!))
+      .storeRef(deploySource(queryId, codeCellHash, ipfsLink, this.#VERIFIER_SHA256))
+      .endCell();
   }
 }
