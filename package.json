@@ -25,7 +25,7 @@
     "__prebuild": "tslint -p tsconfig.json --fix",
     "build": "tsc",
     "__prestart": "npm run build",
-    "start": "ts-node src/server.ts",
+    "start": "ts-node --transpile-only src/server",
     "prepare": "husky install"
   },
   "devDependencies": {
