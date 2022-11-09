@@ -23,9 +23,7 @@ export class IpfsCodeStorageProvider implements CodeStorageProvider {
   constructor() {
     const auth =
       "Basic " +
-      Buffer.from(
-        process.env.INFURA_ID + ":" + process.env.INFURA_SECRET
-      ).toString("base64");
+      Buffer.from(process.env.INFURA_ID + ":" + process.env.INFURA_SECRET).toString("base64");
 
     this.#client = create({
       url: "https://ipfs.infura.io:5001/api/v0",
@@ -40,15 +38,13 @@ export class IpfsCodeStorageProvider implements CodeStorageProvider {
       files.map((f) =>
         this.#client.add({ content: f }).then((r) => {
           return `ipfs://${r.cid.toString()}`;
-        })
-      )
+        }),
+      ),
     );
   }
 
   async write(...files: FileUploadSpec[]): Promise<string[]> {
-    return this.writeFromContent(
-      ...files.map((f) => fs.createReadStream(f.path))
-    );
+    return this.writeFromContent(...files.map((f) => fs.createReadStream(f.path)));
   }
 
   async read(pointer: string): Promise<string> {

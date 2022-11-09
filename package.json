@@ -24,7 +24,8 @@
     "build": "tsc",
     "__prestart": "npm run build",
     "start": "ts-node src/server.ts",
-    "test": "jest --timeout 30000"
+    "test": "jest --timeout 30000",
+    "prepare": "husky install"
   },
   "devDependencies": {
     "@types/bn.js": "^5.1.0",
@@ -37,7 +38,8 @@
     "@types/node": "^16.11.45",
     "jest-mock-extended": "^2.0.7",
     "ts-jest": "^28.0.7",
-    "tslint": "^6.1.3"
+    "tslint": "^6.1.3",
+    "husky": "^8.0.0"
   },
   "engines": {
     "node": "16.x"

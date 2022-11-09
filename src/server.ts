@@ -14,10 +14,7 @@ import idMiddleware from "./req-id-middleware";
 import { IpfsCodeStorageProvider } from "./ipfs-code-storage-provider";
 import rateLimit from "express-rate-limit";
 
-const controller = new Controller(
-  new IpfsCodeStorageProvider(),
-  new FuncSourceVerifier()
-);
+const controller = new Controller(new IpfsCodeStorageProvider(), new FuncSourceVerifier());
 
 const app = express();
 app.use(idMiddleware());
@@ -41,7 +38,7 @@ const upload = multer({
       const _path = path.join(
         TMP_DIR,
         req.id,
-        file.fieldname.match(/\//) ? file.fieldname.split("/")[0] : ""
+        file.fieldname.match(/\//) ? file.fieldname.split("/")[0] : "",
       );
 
       await mkdirp(_path);
@@ -73,9 +70,7 @@ app.post(
   },
   upload.any(),
   async (req, res) => {
-    const jsonFile = (req.files! as any[]).find(
-      (f) => f.fieldname === "json"
-    ).path;
+    const jsonFile = (req.files! as any[]).find((f) => f.fieldname === "json").path;
 
     const jsonData = await readFile(jsonFile);
     const body = JSON.parse(jsonData.toString());
@@ -97,7 +92,7 @@ app.post(
     });
 
     res.json(result);
-  }
+  },
 );
 
 app.listen(port, () => {

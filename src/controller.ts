@@ -20,47 +20,32 @@ function random64BitNumber() {
 }
 
 export class Controller {
-  #codeStorageProvider: IpfsCodeStorageProvider;
+  #ipfsProvider: IpfsCodeStorageProvider;
   #sourceVerifier: SourceVerifier;
   #keypair: tweetnacl.SignKeyPair;
 
-  constructor(
-    codeStorageProvider: IpfsCodeStorageProvider,
-    sourceVerifier: SourceVerifier
-  ) {
-    this.#codeStorageProvider = codeStorageProvider;
+  constructor(ipfsProvider: IpfsCodeStorageProvider, sourceVerifier: SourceVerifier) {
+    this.#ipfsProvider = ipfsProvider;
     this.#sourceVerifier = sourceVerifier;
     this.#keypair = tweetnacl.sign.keyPair.fromSecretKey(
-      Buffer.from(process.env.PRIVATE_KEY!, "base64")
+      Buffer.from(process.env.PRIVATE_KEY!, "base64"),
     );
   }
 
-  async addSource(
-    verificationPayload: SourceVerifyPayload
-  ): Promise<VerifyResult> {
-    const compileResult = await this.#sourceVerifier.verify(
-      verificationPayload
-    );
+  async addSource(verificationPayload: SourceVerifyPayload): Promise<VerifyResult> {
+    const compileResult = await this.#sourceVerifier.verify(verificationPayload);
 
-    if (
-      compileResult.error ||
-      compileResult.result !== "similar" ||
-      !compileResult.hash
-    )
+    if (compileResult.error || compileResult.result !== "similar" || !compileResult.hash)
       return {
         compileResult,
       };
 
-    const sourcesToUpload = verificationPayload.sources.map(
-      (s: SourceToVerify) => ({
-        path: path.join(verificationPayload.tmpDir, s.path),
-        name: s.path,
-      })
-    );
+    const sourcesToUpload = verificationPayload.sources.map((s: SourceToVerify) => ({
+      path: path.join(verificationPayload.tmpDir, s.path),
+      name: s.path,
+    }));
 
-    const fileLocators = await this.#codeStorageProvider.write(
-      ...sourcesToUpload
-    );
+    const fileLocators = await this.#ipfsProvider.write(...sourcesToUpload);
 
     // Strip down to latest hour to avoid spamming IPFS in case of multiple uploads
     const verificationDate = new Date();
@@ -77,8 +62,7 @@ export class Controller {
       sources: fileLocators.map((f, i) => ({
         url: f,
         filename: sourcesToUpload[i].name,
-        hasIncludeDirectives:
-          verificationPayload.sources[i].hasIncludeDirectives,
+        hasIncludeDirectives: verificationPayload.sources[i].hasIncludeDirectives,
         includeInCommand: verificationPayload.sources[i].includeInCommand,
         isEntrypoint: verificationPayload.sources[i].isEntrypoint,
         isStdLib: verificationPayload.sources[i].isStdLib,
@@ -88,9 +72,7 @@ export class Controller {
 
     const jsonPayload = JSON.stringify(sourceSpec);
 
-    const ipfsLink = await this.#codeStorageProvider.writeFromContent(
-      Buffer.from(jsonPayload)
-    );
+    const ipfsLink = await this.#ipfsProvider.writeFromContent(Buffer.from(jsonPayload));
 
     console.log(ipfsLink);
 
@@ -115,18 +97,13 @@ export class Controller {
           .storeUint(new BN(Buffer.from(compileResult.hash!, "base64")), 256)
           .storeRef(
             // BEGIN: source item content cell
-            beginCell()
-              .storeUint(1, 8)
-              .storeBuffer(Buffer.from(ipfsLink[0]))
-              .endCell()
+            beginCell().storeUint(1, 8).storeBuffer(Buffer.from(ipfsLink[0])).endCell(),
           )
-          .endCell()
+          .endCell(),
       )
       .endCell();
 
-    const sig = Buffer.from(
-      tweetnacl.sign.detached(msgCell.hash(), this.#keypair.secretKey)
-    );
+    const sig = Buffer.from(tweetnacl.sign.detached(msgCell.hash(), this.#keypair.secretKey));
 
     const sigCell = beginCell()
       .storeBuffer(sig)

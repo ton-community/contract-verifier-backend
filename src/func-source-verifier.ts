@@ -3,18 +3,12 @@ import { exec } from "child_process";
 const execAsync = promisify(exec);
 import { readFile, writeFile } from "fs/promises";
 import { Cell } from "ton";
-import {
-  FUNC_COMPILER_VERSION,
-  SourceVerifier,
-  SourceVerifyPayload,
-  CompileResult,
-} from "./types";
+import { FUNC_COMPILER_VERSION, SourceVerifier, SourceVerifyPayload, CompileResult } from "./types";
 import path from "path";
 
 function randomStr(length: number) {
   let result = "";
-  const characters =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   const charactersLength = characters.length;
   for (let i = 0; i < length; i++) {
     result += characters.charAt(Math.floor(Math.random() * charactersLength));
@@ -33,20 +27,14 @@ function prepareFuncCommand(
   executable: string,
   funcArgs: string,
   fiftOutFile: string,
-  commandLine: string
+  commandLine: string,
 ) {
   if (/[;>&]/.test(commandLine)) {
     throw new Error("Unallowed special characters in command line");
   }
   const getPath = (_path: string) => _path;
 
-  return [
-    getPath(executable),
-    funcArgs,
-    "-o",
-    getPath(fiftOutFile),
-    commandLine,
-  ]
+  return [getPath(executable), funcArgs, "-o", getPath(fiftOutFile), commandLine]
     .filter((c) => c)
     .join(" ");
 }
@@ -55,16 +43,11 @@ async function compileFuncToCodeHash(
   funcCompiler: FUNC_COMPILER_VERSION,
   funcArgs: string,
   commandLine: string,
-  tmpDir: string
+  tmpDir: string,
 ) {
   const fiftOutFile = "output.fif";
   const executable = funcCompilers[funcCompiler];
-  const funcCmd = prepareFuncCommand(
-    executable,
-    funcArgs,
-    fiftOutFile,
-    commandLine
-  );
+  const funcCmd = prepareFuncCommand(executable, funcArgs, fiftOutFile, commandLine);
 
   const { stderr } = await execAsync(funcCmd, { cwd: tmpDir });
   if (stderr) {
@@ -102,22 +85,18 @@ export class FuncSourceVerifier implements SourceVerifier {
     let funcCmd: string | null = null;
 
     try {
-      const { hash: codeCellHash, funcCmd: _funcCmd } =
-        await compileFuncToCodeHash(
-          payload.version,
-          "",
-          payload.commandLine,
-          payload.tmpDir
-        );
+      const { hash: codeCellHash, funcCmd: _funcCmd } = await compileFuncToCodeHash(
+        payload.version,
+        "",
+        payload.commandLine,
+        payload.tmpDir,
+      );
 
       funcCmd = _funcCmd;
 
       return {
         hash: codeCellHash,
-        result:
-          codeCellHash === payload.knownContractHash
-            ? "similar"
-            : "not_similar",
+        result: codeCellHash === payload.knownContractHash ? "similar" : "not_similar",
         error: null,
         funcCmd,
       };
