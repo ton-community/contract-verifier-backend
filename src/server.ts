@@ -64,6 +64,10 @@ app.use((req, res, next) => {
 const port = process.env.PORT || 3003;
 
 // Routes
+app.get("/hc", (req, res) => {
+  res.send("ok");
+});
+
 app.post(
   "/source",
   limiter,

@@ -7,7 +7,7 @@ export function checkEnvVars() {
     "PRIVATE_KEY",
   ]
     .filter((e) => !process.env[e])
-    .reduce(Array.prototype.join.bind(null, " "));
+    .join(" ");
 
   if (missingEnvVars) throw new Error("Missing env vars: " + missingEnvVars);
 }
