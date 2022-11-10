@@ -1,9 +1,9 @@
 import { promisify } from "util";
 import { exec } from "child_process";
 const execAsync = promisify(exec);
-import { readFile, writeFile } from "fs/promises";
+import { readFile, writeFile, readdir } from "fs/promises";
 import { Cell } from "ton";
-import { FUNC_COMPILER_VERSION, SourceVerifier, SourceVerifyPayload, CompileResult } from "./types";
+import { FuncCompilerVersion, SourceVerifier, SourceVerifyPayload, CompileResult } from "./types";
 import path from "path";
 
 function randomStr(length: number) {
@@ -16,11 +16,9 @@ function randomStr(length: number) {
   return result;
 }
 
-const funcCompilers: { [key in FUNC_COMPILER_VERSION]: string } = {
-  // "0.0.9": "./binaries/func.0.0.9", // [ Commit: 9875f02ef4ceba5b065d5e63c920f91aec73224e, Date: 2021-11-08 00:10:10 +0300]
-  // "0.1.0": "./binaries/func.0.1.0", //  [ Commit: 5b9345263efdb78a9723c4f11409eced14912a71, Date: 2021-12-28 14:41:44 +0200]
-  // TODO restore "0.2.0": "./binaries/func.0.2.0", // [ Commit: db3619ed310484fcfa4e3565be8e10458f9f2f5f, Date: 2022-05-17 15:56:31 +0300]
-  "0.2.0": "func", // [ Commit: db3619ed310484fcfa4e3565be8e10458f9f2f5f, Date: 2022-05-17 15:56:31 +0300]
+const funcCompilers: { [key in FuncCompilerVersion]: string } = {
+  "0.2.0": "resources/binaries/0.2.0",
+  "0.3.0": "resources/binaries/0.3.0",
 };
 
 function prepareFuncCommand(
@@ -40,13 +38,13 @@ function prepareFuncCommand(
 }
 
 async function compileFuncToCodeHash(
-  funcCompiler: FUNC_COMPILER_VERSION,
+  funcVersion: FuncCompilerVersion,
   funcArgs: string,
   commandLine: string,
   tmpDir: string,
 ) {
   const fiftOutFile = "output.fif";
-  const executable = funcCompilers[funcCompiler];
+  const executable = path.join(process.cwd(), funcCompilers[funcVersion], "func");
   const funcCmd = prepareFuncCommand(executable, funcArgs, fiftOutFile, commandLine);
 
   const { stderr } = await execAsync(funcCmd, { cwd: tmpDir });
@@ -54,7 +52,7 @@ async function compileFuncToCodeHash(
     throw new Error(stderr);
   }
 
-  const codeCell = await fiftToCodeCell(fiftOutFile, tmpDir);
+  const codeCell = await fiftToCodeCell(funcVersion, fiftOutFile, tmpDir);
 
   return {
     hash: codeCell.hash().toString("base64"),
@@ -62,7 +60,7 @@ async function compileFuncToCodeHash(
   };
 }
 
-async function fiftToCodeCell(fiftFile: string, tmpDir: string) {
+async function fiftToCodeCell(funcVersion: FuncCompilerVersion, fiftFile: string, tmpDir: string) {
   const b64OutFile = `${fiftFile}-b64.cell`;
 
   const fiftCellSource = `"${fiftFile}" include \n
@@ -71,7 +69,11 @@ boc>B "${b64OutFile}" B>file`;
   const tmpB64Fift = path.join(tmpDir, `${randomStr(10)}.cell.tmp.fif`);
   await writeFile(tmpB64Fift, fiftCellSource);
 
-  await execAsync(`fift -s ${tmpB64Fift}`);
+  const executable = path.join(process.cwd(), funcCompilers[funcVersion], "fift");
+
+  process.env.FIFTPATH = path.join(process.cwd(), "resources", "fiftlib");
+
+  await execAsync(`${executable} -s ${tmpB64Fift}`);
 
   return Cell.fromBoc(await readFile(b64OutFile))[0];
 }

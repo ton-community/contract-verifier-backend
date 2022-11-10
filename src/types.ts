@@ -1,4 +1,4 @@
-export type FUNC_COMPILER_VERSION = "0.2.0";
+export type FuncCompilerVersion = "0.2.0" | "0.3.0";
 
 export interface SourceVerifier {
   verify(payload: SourceVerifyPayload): Promise<CompileResult>;
