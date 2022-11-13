@@ -28,13 +28,13 @@ Currently deployed on heroku, using the [func compilation buildpack](https://git
 ```
 
 ### Environment variables
-`INFURA_ID` and `INFURA_SECRET` - The backend persists sources and compilation metadata to an infura IPFS node.
-`PRIVATE_KEY` - To sign its message cell with a private key, which is verified by the [verifier registry](https://github.com/ton-blockchain/TEPs/pull/91).
+* `INFURA_ID` and `INFURA_SECRET` - The backend persists sources and compilation metadata to an infura IPFS node.
+* `PRIVATE_KEY` - To sign its message cell with a private key, which is verified by the [verifier registry](https://github.com/ton-blockchain/TEPs/pull/91).
 Provide an ED25519 compatible private key in the `PRIVATE_KEY` env var.
-`SOURCES_REGISTRY` - The address of the sources registry contract
-`VERIFIER_ID` - Sources verifier id
+* `SOURCES_REGISTRY` - The address of the sources registry contract
+* `VERIFIER_ID` - Sources verifier id
 
-### Running
+## Running
 * `npm install`
 * `npm run start`
 
