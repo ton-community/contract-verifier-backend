@@ -3,7 +3,8 @@ A backend used for compiling FunC code and providing a signed message to be forw
 The signed message is stored on a source item contract as a proof that the source code compiles to a specific code cell hash.
 
 ## Configurations
-The backend supports compiling
+The backend supports compiling in func 0.2.0 and 0.3.0.
+(TODO address fiftlib/fift versions)
 
 ## Preqrequisites
 
