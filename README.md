@@ -11,10 +11,10 @@ The backend supports compiling in func 0.2.0 and 0.3.0.
 ### Binaries + fiftlib
 Binaries can be acquired (precompiled) from [ton-binaries](https://github.com/ton-defi-org/ton-binaries) repo or from the official [ton repo](https://github.com/ton-blockchain/ton).
 
-#### Production 
+#### Heroku 
 Currently deployed on heroku, using the [func compilation buildpack](https://github.com/ton-defi-org/heroku-buildpack-func-compiler/).
 
-####  Locally
+#### Locally
 * Ensure you have working binaries for func 0.2.0/0.3.0 + fiftlib in this format:
 ```
   resources/
@@ -30,8 +30,7 @@ Currently deployed on heroku, using the [func compilation buildpack](https://git
 
 ### Environment variables
 * `INFURA_ID` and `INFURA_SECRET` - The backend persists sources and compilation metadata to an infura IPFS node.
-* `PRIVATE_KEY` - To sign its message cell with a private key, which is verified by the [verifier registry](https://github.com/ton-blockchain/TEPs/pull/91).
-Provide an ED25519 compatible private key in the `PRIVATE_KEY` env var.
+* `PRIVATE_KEY` - To sign its message cell with a private key, which is verified by the [verifier registry](https://github.com/ton-blockchain/TEPs/pull/91). Provide an ED25519 compatible private key.
 * `SOURCES_REGISTRY` - The address of the sources registry contract
 * `VERIFIER_ID` - Sources verifier id
 
