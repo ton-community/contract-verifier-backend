@@ -77,6 +77,8 @@ export class Controller {
       commandLine: compileResult.funcCmd,
       compiler: verificationPayload.compiler,
       version: verificationPayload.version,
+      fiftLibCommit: compileResult.fiftLibCommit,
+      fiftCommit: compileResult.fiftCommit,
       hash: compileResult.hash,
       verificationDate: getNowHourRoundedDown().getTime(),
       sources: fileLocators.map((f, i) => {

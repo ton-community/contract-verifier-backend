@@ -16,6 +16,8 @@ export type CompileResult = {
   error: string | null;
   hash: string | null;
   funcCmd: string | null;
+  fiftCommit: string | null;
+  fiftLibCommit: string | null;
 };
 
 type Path = string;
