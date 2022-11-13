@@ -3,7 +3,7 @@ A backend used for compiling FunC code and providing a signed message to be forw
 The signed message is stored on a source item contract as a proof that the source code compiles to a specific code cell hash.
 
 This repo is a part of the following:
-1. contract-verifier-contracts - Verifier registry and sources registry contracts which verify signatures and store an on-chain proof per code cell hash.
+1. contract-verifier-contracts - Sources registry contracts which stores an on-chain proof per code cell hash.
 2. contract-verifier-backend (this repo) - Backend for compiling FunC and returning a signature over a message containing the resulting code cell hash.
 3. contract-verifier-sdk - A UI component to fetch and display sources from Ton blockchain and IPFS, including code highlighting.
 4. ton-contract-verifier - A UI app to interact with the backend, contracts and publish an on-chain proof.
