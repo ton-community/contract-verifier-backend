@@ -3,7 +3,13 @@ import { exec } from "child_process";
 const execAsync = promisify(exec);
 import { readFile, writeFile, readdir } from "fs/promises";
 import { Cell } from "ton";
-import { FuncCompilerVersion, SourceVerifier, SourceVerifyPayload, CompileResult } from "./types";
+import {
+  FuncCliCompilerVersion,
+  SourceVerifier,
+  SourceVerifyPayload,
+  CompileResult,
+  UserProvidedFuncCliCompileSettings,
+} from "./types";
 import path from "path";
 
 function randomStr(length: number) {
@@ -16,14 +22,14 @@ function randomStr(length: number) {
   return result;
 }
 
-const funcCompilers: { [key in FuncCompilerVersion]: string } = {
+const funcCompilers: { [key in FuncCliCompilerVersion]: string } = {
   "0.2.0": "resources/binaries/0.2.0",
   "0.3.0": "resources/binaries/0.3.0",
 };
 
-const fiftLibCommit = "d46e4b35387a12a08a48be4b2bb7b52865c34f00";
+const fiftlibVersion = "d46e4b35387a12a08a48be4b2bb7b52865c34f00";
 
-const fiftVersions: { [key in FuncCompilerVersion]: string } = {
+const fiftVersions: { [key in FuncCliCompilerVersion]: string } = {
   "0.2.0": "a9ba27382c7f25618323356b9f408281c6c27704",
   "0.3.0": "20758d6bdd0c1327091287e8a620f660d1a9f4da",
 };
@@ -49,7 +55,7 @@ function funcCommandForDisplay(cmd: string): string {
 }
 
 async function compileFuncToCodeHash(
-  funcVersion: FuncCompilerVersion,
+  funcVersion: FuncCliCompilerVersion,
   funcArgs: string,
   commandLine: string,
   tmpDir: string,
@@ -71,7 +77,11 @@ async function compileFuncToCodeHash(
   };
 }
 
-async function fiftToCodeCell(funcVersion: FuncCompilerVersion, fiftFile: string, tmpDir: string) {
+async function fiftToCodeCell(
+  funcVersion: FuncCliCompilerVersion,
+  fiftFile: string,
+  tmpDir: string,
+) {
   const b64OutFile = `${fiftFile}-b64.cell`;
 
   const fiftCellSource = `"${fiftFile}" include \n
@@ -92,12 +102,13 @@ boc>B "${b64OutFile}" B>file`;
 export class FuncSourceVerifier implements SourceVerifier {
   async verify(payload: SourceVerifyPayload): Promise<CompileResult> {
     let funcCmd: string | null = null;
+    const compilerSettings = payload.compilerSettings as UserProvidedFuncCliCompileSettings;
 
     try {
       const { hash: codeCellHash, funcCmd: _funcCmd } = await compileFuncToCodeHash(
-        payload.version,
+        compilerSettings.funcVersion,
         "",
-        payload.commandLine,
+        compilerSettings.commandLine,
         payload.tmpDir,
       );
 
@@ -107,18 +118,24 @@ export class FuncSourceVerifier implements SourceVerifier {
         hash: codeCellHash,
         result: codeCellHash === payload.knownContractHash ? "similar" : "not_similar",
         error: null,
-        funcCmd,
-        fiftLibCommit,
-        fiftCommit: fiftVersions[payload.version],
+        compilerSettings: {
+          funcVersion: compilerSettings.funcVersion,
+          commandLine: funcCmd,
+          fiftlibVersion,
+          fiftVersion: fiftVersions[compilerSettings.funcVersion],
+        },
       };
     } catch (e) {
       return {
         result: "unknown_error",
         error: e.toString(),
         hash: null,
-        funcCmd,
-        fiftLibCommit,
-        fiftCommit: fiftVersions[payload.version],
+        compilerSettings: {
+          funcVersion: compilerSettings.funcVersion,
+          commandLine: funcCmd ?? "",
+          fiftlibVersion,
+          fiftVersion: fiftVersions[compilerSettings.funcVersion],
+        },
       };
     }
   }

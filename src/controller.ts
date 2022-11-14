@@ -1,11 +1,13 @@
 import { SourceVerifier, SourceVerifyPayload, SourceToVerify, CompileResult } from "./types";
 import path from "path";
 import tweetnacl from "tweetnacl";
-import { VerifyResult } from "./types";
+import { VerifyResult, Compiler } from "./types";
 import { Address, beginCell, Cell } from "ton";
 import BN from "bn.js";
 import { IpfsCodeStorageProvider } from "./ipfs-code-storage-provider";
 import { sha256, random64BitNumber, getNowHourRoundedDown } from "./utils";
+import { FuncSourceVerifier } from "./func-source-verifier";
+import { TonCompilerSourceVerifier } from "./ton-compiler-source-verifier";
 
 export type Base64URL = string;
 
@@ -41,16 +43,19 @@ function verifierRegistryForwardMessage(
     .toBoc();
 }
 
+const compilers: { [key in Compiler]: SourceVerifier } = {
+  "cli:func": new FuncSourceVerifier(),
+  "npm:ton-compiler": new TonCompilerSourceVerifier(),
+};
+
 export class Controller {
   #ipfsProvider: IpfsCodeStorageProvider;
-  #sourceVerifier: SourceVerifier;
   #keypair: tweetnacl.SignKeyPair;
   #VERIFIER_SHA256: Buffer;
 
   constructor(ipfsProvider: IpfsCodeStorageProvider, sourceVerifier: SourceVerifier) {
     this.#VERIFIER_SHA256 = sha256(process.env.VERIFIER_ID!);
     this.#ipfsProvider = ipfsProvider;
-    this.#sourceVerifier = sourceVerifier;
     this.#keypair = tweetnacl.sign.keyPair.fromSecretKey(
       Buffer.from(process.env.PRIVATE_KEY!, "base64"),
     );
@@ -58,8 +63,8 @@ export class Controller {
 
   async addSource(verificationPayload: SourceVerifyPayload): Promise<VerifyResult> {
     // Compile
-    const compileResult = await this.#sourceVerifier.verify(verificationPayload);
-
+    const compiler = compilers[verificationPayload.compiler];
+    const compileResult = await compiler.verify(verificationPayload);
     if (compileResult.error || compileResult.result !== "similar" || !compileResult.hash) {
       return {
         compileResult,
@@ -74,11 +79,8 @@ export class Controller {
     const fileLocators = await this.#ipfsProvider.write(...sourcesToUpload);
 
     const sourceSpec = {
-      commandLine: compileResult.funcCmd,
+      compilerSettings: compileResult.compilerSettings,
       compiler: verificationPayload.compiler,
-      version: verificationPayload.version,
-      fiftLibCommit: compileResult.fiftLibCommit,
-      fiftCommit: compileResult.fiftCommit,
       hash: compileResult.hash,
       verificationDate: getNowHourRoundedDown().getTime(),
       sources: fileLocators.map((f, i) => {
@@ -87,7 +89,8 @@ export class Controller {
           url: f,
           filename: sourcesToUpload[i].name,
           hasIncludeDirectives: src.hasIncludeDirectives,
-          includeInCommand: src.includeInCommand,
+          includeInCommand:
+            verificationPayload.compiler === "npm:ton-compiler" || src.includeInCommand,
           isEntrypoint: src.isEntrypoint,
           isStdLib: src.isStdLib,
         };

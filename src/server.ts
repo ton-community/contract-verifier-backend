@@ -14,6 +14,7 @@ import idMiddleware from "./req-id-middleware";
 import { IpfsCodeStorageProvider } from "./ipfs-code-storage-provider";
 import rateLimit from "express-rate-limit";
 import { checkEnvVars } from "./check-env-vars";
+import { TonCompilerSourceVerifier } from "./ton-compiler-source-verifier";
 
 const app = express();
 app.use(idMiddleware());
@@ -22,7 +23,7 @@ app.use(express.json());
 
 checkEnvVars();
 
-const controller = new Controller(new IpfsCodeStorageProvider(), new FuncSourceVerifier());
+const controller = new Controller(new IpfsCodeStorageProvider(), new TonCompilerSourceVerifier());
 
 const limiter = rateLimit({
   windowMs: 5 * 60 * 1000, // 5 minutes
@@ -56,7 +57,7 @@ const upload = multer({
 app.use((req, res, next) => {
   res.on("close", async () => {
     if (req.files) {
-      rm(path.join(TMP_DIR, req.id), { recursive: true, force: true });
+      // rm(path.join(TMP_DIR, req.id), { recursive: true, force: true });
     }
   });
   next();
@@ -84,8 +85,7 @@ app.post(
 
     const result = await controller.addSource({
       compiler: body.compiler,
-      version: body.version,
-      commandLine: body.commandLine, // TODO sanitize
+      compilerSettings: body.compilerSettings,
       sources: (req.files! as any[])
         .filter((f: any) => f.fieldname !== "json")
         .map((f, i) => ({
