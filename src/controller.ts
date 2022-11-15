@@ -51,7 +51,7 @@ export class Controller {
   #keypair: tweetnacl.SignKeyPair;
   #VERIFIER_SHA256: Buffer;
 
-  constructor(ipfsProvider: IpfsCodeStorageProvider, sourceVerifier: SourceVerifier) {
+  constructor(ipfsProvider: IpfsCodeStorageProvider) {
     this.#VERIFIER_SHA256 = sha256(process.env.VERIFIER_ID!);
     this.#ipfsProvider = ipfsProvider;
     this.#keypair = tweetnacl.sign.keyPair.fromSecretKey(

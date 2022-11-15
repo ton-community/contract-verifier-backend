@@ -22,7 +22,7 @@ app.use(express.json());
 
 checkEnvVars();
 
-const controller = new Controller(new IpfsCodeStorageProvider(), new TonCompilerSourceVerifier());
+const controller = new Controller(new IpfsCodeStorageProvider());
 
 const limiter = rateLimit({
   windowMs: 5 * 60 * 1000, // 5 minutes
