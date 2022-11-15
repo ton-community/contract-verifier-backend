@@ -56,7 +56,7 @@ const upload = multer({
 app.use((req, res, next) => {
   res.on("close", async () => {
     if (req.files) {
-      // rm(path.join(TMP_DIR, req.id), { recursive: true, force: true });
+      rm(path.join(TMP_DIR, req.id), { recursive: true, force: true });
     }
   });
   next();
