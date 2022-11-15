@@ -14,7 +14,6 @@ import idMiddleware from "./req-id-middleware";
 import { IpfsCodeStorageProvider } from "./ipfs-code-storage-provider";
 import rateLimit from "express-rate-limit";
 import { checkEnvVars } from "./check-env-vars";
-import { TonCompilerSourceVerifier } from "./ton-compiler-source-verifier";
 
 const app = express();
 app.use(idMiddleware());

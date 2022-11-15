@@ -7,7 +7,6 @@ import BN from "bn.js";
 import { IpfsCodeStorageProvider } from "./ipfs-code-storage-provider";
 import { sha256, random64BitNumber, getNowHourRoundedDown } from "./utils";
 import { FuncSourceVerifier } from "./func-source-verifier";
-import { TonCompilerSourceVerifier } from "./ton-compiler-source-verifier";
 
 export type Base64URL = string;
 
@@ -44,8 +43,7 @@ function verifierRegistryForwardMessage(
 }
 
 const compilers: { [key in Compiler]: SourceVerifier } = {
-  "cli:func": new FuncSourceVerifier(),
-  "npm:ton-compiler": new TonCompilerSourceVerifier(),
+  func: new FuncSourceVerifier(),
 };
 
 export class Controller {
@@ -89,8 +87,7 @@ export class Controller {
           url: f,
           filename: sourcesToUpload[i].name,
           hasIncludeDirectives: src.hasIncludeDirectives,
-          includeInCommand:
-            verificationPayload.compiler === "npm:ton-compiler" || src.includeInCommand,
+          includeInCommand: src.includeInCommand,
           isEntrypoint: src.isEntrypoint,
           isStdLib: src.isStdLib,
         };
