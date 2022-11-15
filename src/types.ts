@@ -1,3 +1,5 @@
+export type Compiler = "func";
+
 export type FuncCompilerVersion = "0.2.0" | "0.3.0";
 
 export interface SourceVerifier {
@@ -11,11 +13,21 @@ export type VerifyResult = {
   msgCell?: Buffer;
 };
 
+export type UserProvidedFuncCompileSettings = {
+  funcVersion: FuncCompilerVersion;
+  commandLine: string;
+};
+
+export type FuncCliCompileSettings = UserProvidedFuncCompileSettings & {
+  fiftVersion: string;
+  fiftlibVersion: string;
+};
+
 export type CompileResult = {
   result: "similar" | "not_similar" | "compile_error" | "unknown_error";
   error: string | null;
   hash: string | null;
-  funcCmd: string | null;
+  compilerSettings: FuncCliCompileSettings;
 };
 
 type Path = string;
@@ -29,9 +41,8 @@ export type SourceToVerify = {
 };
 
 export type CompileOptions = {
-  compiler: "func";
-  version: "0.2.0"; // "0.0.9" | "0.1.0" |
-  commandLine: string;
+  compiler: Compiler;
+  compilerSettings: UserProvidedFuncCompileSettings;
 };
 
 export type SourceVerifyPayload = CompileOptions & {

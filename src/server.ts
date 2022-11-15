@@ -22,7 +22,7 @@ app.use(express.json());
 
 checkEnvVars();
 
-const controller = new Controller(new IpfsCodeStorageProvider(), new FuncSourceVerifier());
+const controller = new Controller(new IpfsCodeStorageProvider());
 
 const limiter = rateLimit({
   windowMs: 5 * 60 * 1000, // 5 minutes
@@ -84,8 +84,7 @@ app.post(
 
     const result = await controller.addSource({
       compiler: body.compiler,
-      version: body.version,
-      commandLine: body.commandLine, // TODO sanitize
+      compilerSettings: body.compilerSettings,
       sources: (req.files! as any[])
         .filter((f: any) => f.fieldname !== "json")
         .map((f, i) => ({
