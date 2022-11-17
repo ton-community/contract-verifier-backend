@@ -3,6 +3,6 @@ node_modules
 .DS_Store
 *.cell
 *.fif
-.env
+.env.local
 tmp/
 resources/

@@ -1,6 +1,8 @@
 import express from "express";
 require("express-async-errors");
-require("dotenv").config();
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.local" });
+dotenv.config({ path: ".env" });
 
 import cors from "cors";
 import { Controller } from "./controller";
