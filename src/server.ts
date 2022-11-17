@@ -9,7 +9,6 @@ import { Controller } from "./controller";
 import multer from "multer";
 import { readFile, rm } from "fs/promises";
 import mkdirp from "mkdirp";
-import { FuncSourceVerifier } from "./func-source-verifier";
 import { rmSync } from "fs";
 import path from "path";
 import idMiddleware from "./req-id-middleware";

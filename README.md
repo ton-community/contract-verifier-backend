@@ -22,6 +22,8 @@ hence verification response will include all 3 versions: FunC, fiftlib and fift.
 
 Binaries can be acquired (precompiled) from [ton-binaries](https://github.com/ton-defi-org/ton-binaries) repo or from the official [ton repo](https://github.com/ton-blockchain/ton).
 
+Fiftlib can also be acquired from the same repo.
+
 #### Heroku
 
 Currently deployed on heroku, using the [func compilation buildpack](https://github.com/ton-defi-org/heroku-buildpack-func-compiler/).
@@ -37,6 +39,9 @@ Currently deployed on heroku, using the [func compilation buildpack](https://git
       0.2.0/func
       0.3.0/fift
       0.3.0/func
+    fiftlib/
+      Asm.fif
+      Fift.fif
 ```
 
 ### Environment variables
