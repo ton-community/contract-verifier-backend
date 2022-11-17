@@ -2,7 +2,7 @@ secrets/
 node_modules
 .DS_Store
 *.cell
+*.fif
 .env
 tmp/
-resources/binaries/
-resources/fiftlib/other_versions
+resources/

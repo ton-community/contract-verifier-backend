@@ -13,14 +13,14 @@ import path from "path";
 import idMiddleware from "./req-id-middleware";
 import { IpfsCodeStorageProvider } from "./ipfs-code-storage-provider";
 import rateLimit from "express-rate-limit";
-import { checkEnvVars } from "./check-env-vars";
+import { checkPrerequisites } from "./check-prerequisites";
 
 const app = express();
 app.use(idMiddleware());
 app.use(cors());
 app.use(express.json());
 
-checkEnvVars();
+checkPrerequisites();
 
 const controller = new Controller(new IpfsCodeStorageProvider());
 
