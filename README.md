@@ -1,7 +1,9 @@
 # contract-verifier-backend
 
-A backend used for compiling FunC code and providing a signed message to be forwarded to the [Sources Registry](https://github.com/ton-blockchain/TEPs/pull/91) contract.
-The signed message is stored on a source item contract as a proof that the source code compiles to a specific code cell hash.
+A backend used for compiling FunC code and returning a signed message containing a proof of verification to be forwarded to the [Sources Registry](https://github.com/ton-blockchain/TEPs/pull/91) contract.
+The signed message is later stored on a source item contract as a proof that the source code compiles to a specific code cell hash.
+
+## Related repositories
 
 This repo is a part of the following:
 
@@ -26,7 +28,7 @@ Fiftlib can also be acquired from the same repo.
 
 #### Heroku
 
-Currently deployed on heroku, using the [func compilation buildpack](https://github.com/ton-defi-org/heroku-buildpack-func-compiler/).
+To deploy on heroku, you can use the [func compilation buildpack](https://github.com/ton-defi-org/heroku-buildpack-func-compiler/).
 
 #### Locally
 
@@ -48,8 +50,9 @@ Currently deployed on heroku, using the [func compilation buildpack](https://git
 
 - `INFURA_ID` and `INFURA_SECRET` - The backend persists sources and compilation metadata to an infura IPFS node.
 - `PRIVATE_KEY` - To sign its message cell with a private key, which is verified by the [verifier registry](https://github.com/ton-blockchain/TEPs/pull/91). Provide an ED25519 compatible private key.
-- `SOURCES_REGISTRY` - The address of the sources registry contract
-- `VERIFIER_ID` - Sources verifier id
+- `SOURCES_REGISTRY` - The address of the sources registry contract (default from .env)
+- `VERIFIER_ID` - Sources verifier id (default from .env)
+- `FIFTLIB_VERSION` - fiftlib version (default from .env)
 
 ## Running
 
