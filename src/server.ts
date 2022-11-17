@@ -1,26 +1,27 @@
 import express from "express";
 require("express-async-errors");
-require("dotenv").config();
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.local" });
+dotenv.config({ path: ".env" });
 
 import cors from "cors";
 import { Controller } from "./controller";
 import multer from "multer";
 import { readFile, rm } from "fs/promises";
 import mkdirp from "mkdirp";
-import { FuncSourceVerifier } from "./func-source-verifier";
 import { rmSync } from "fs";
 import path from "path";
 import idMiddleware from "./req-id-middleware";
 import { IpfsCodeStorageProvider } from "./ipfs-code-storage-provider";
 import rateLimit from "express-rate-limit";
-import { checkEnvVars } from "./check-env-vars";
+import { checkPrerequisites } from "./check-prerequisites";
 
 const app = express();
 app.use(idMiddleware());
 app.use(cors());
 app.use(express.json());
 
-checkEnvVars();
+checkPrerequisites();
 
 const controller = new Controller(new IpfsCodeStorageProvider());
 
