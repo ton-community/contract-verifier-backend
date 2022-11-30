@@ -73,7 +73,14 @@ export class Controller {
     if (!process.env.ALLOW_REVERIFICATION) {
       const isDeployed = await isProofDeployed(verificationPayload.knownContractHash);
       if (isDeployed) {
-        throw new Error("Proof is already deployed");
+        return {
+          compileResult: {
+            result: "unknown_error",
+            error: "Contract is already deployed",
+            hash: null,
+            compilerSettings: compileResult.compilerSettings,
+          },
+        };
       }
     }
 
