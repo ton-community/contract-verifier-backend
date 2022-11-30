@@ -7,6 +7,7 @@ import BN from "bn.js";
 import { IpfsCodeStorageProvider } from "./ipfs-code-storage-provider";
 import { sha256, random64BitNumber, getNowHourRoundedDown } from "./utils";
 import { FuncSourceVerifier } from "./func-source-verifier";
+import { isProofDeployed } from "./is-proof-deployed";
 
 export type Base64URL = string;
 
@@ -67,6 +68,13 @@ export class Controller {
       return {
         compileResult,
       };
+    }
+
+    if (!process.env.ALLOW_REVERIFICATION) {
+      const isDeployed = await isProofDeployed(verificationPayload.knownContractHash);
+      if (isDeployed) {
+        throw new Error("Proof is already deployed");
+      }
     }
 
     // Upload sources to IPFS
