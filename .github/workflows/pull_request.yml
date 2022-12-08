@@ -1,0 +1,19 @@
+name: Build PR (Standard)
+
+on:
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Use Node.js ${{ matrix.node_version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node_version }}
+          cache: "npm"
+      - name: npm ci, build
+      - run: npm ci
+      - run: CI=false npm run build
