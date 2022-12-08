@@ -22,7 +22,7 @@ boc>B "${b64OutFile}" B>file`;
 
   const executable = path.join(process.cwd(), funcCompilers[funcVersion], "fift");
 
-  process.env.FIFTPATH = path.join(process.cwd(), "resources", "fiftlib");
+  process.env.FIFTPATH = path.join(process.cwd(), funcCompilers[funcVersion], "fiftlib");
 
   await execAsync(`${executable} -s ${tmpB64Fift}`);
 
