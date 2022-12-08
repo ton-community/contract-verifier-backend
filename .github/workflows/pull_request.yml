@@ -14,6 +14,5 @@ jobs:
         with:
           node-version: ${{ matrix.node_version }}
           cache: "npm"
-      - name: npm ci, build
-        run: npm ci
-        # run: CI=false npm run build
+      - run: npm ci
+      - run: CI=false npm run build
