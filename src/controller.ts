@@ -8,6 +8,7 @@ import { IpfsCodeStorageProvider } from "./ipfs-code-storage-provider";
 import { sha256, random64BitNumber, getNowHourRoundedDown } from "./utils";
 import { FuncSourceVerifier } from "./func-source-verifier";
 import { isProofDeployed } from "./is-proof-deployed";
+import { FiftSourceVerifier } from "./fift-source-verifier";
 
 export type Base64URL = string;
 
@@ -45,6 +46,7 @@ function verifierRegistryForwardMessage(
 
 const compilers: { [key in Compiler]: SourceVerifier } = {
   func: new FuncSourceVerifier(),
+  fift: new FiftSourceVerifier(),
 };
 
 export class Controller {
@@ -79,6 +81,7 @@ export class Controller {
             error: "Contract is already deployed",
             hash: null,
             compilerSettings: compileResult.compilerSettings,
+            sources: compileResult.sources,
           },
         };
       }
@@ -97,14 +100,9 @@ export class Controller {
       hash: compileResult.hash,
       verificationDate: getNowHourRoundedDown().getTime(),
       sources: fileLocators.map((f, i) => {
-        const src = verificationPayload.sources[i];
         return {
           url: f,
-          filename: sourcesToUpload[i].name,
-          hasIncludeDirectives: src.hasIncludeDirectives,
-          includeInCommand: src.includeInCommand,
-          isEntrypoint: src.isEntrypoint,
-          isStdLib: src.isStdLib,
+          ...compileResult.sources[i],
         };
       }),
       knownContractAddress: verificationPayload.knownContractAddress,
@@ -114,6 +112,8 @@ export class Controller {
     const [ipfsLink] = await this.#ipfsProvider.writeFromContent(
       Buffer.from(JSON.stringify(sourceSpec)),
     );
+
+    console.log(ipfsLink);
 
     const queryId = random64BitNumber();
 
