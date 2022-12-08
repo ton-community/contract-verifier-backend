@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { funcCompilers } from "./binaries";
 export function checkPrerequisites() {
   const missingEnvVars = [
     "VERIFIER_ID",
@@ -13,14 +14,14 @@ export function checkPrerequisites() {
 
   if (missingEnvVars) throw new Error("Missing env vars: " + missingEnvVars);
 
-  const missingFiles = [
-    path.join("resources", "fiftlib", "Asm.fif"),
-    path.join("resources", "fiftlib", "Fift.fif"),
-    path.join("resources", "binaries", "0.2.0", "func"),
-    path.join("resources", "binaries", "0.2.0", "fift"),
-    path.join("resources", "binaries", "0.3.0", "func"),
-    path.join("resources", "binaries", "0.3.0", "fift"),
-  ]
+  const missingFiles = Object.values(funcCompilers)
+    .map((versionDir) => [
+      path.join(versionDir, "func"),
+      path.join(versionDir, "fift"),
+      path.join(versionDir, "fiftlib", "Asm.fif"),
+      path.join(versionDir, "fiftlib", "Fift.fif"),
+    ])
+    .flat()
     .filter((f) => !fs.existsSync(path.join(process.cwd(), f)))
     .join(" ");
 

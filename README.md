@@ -15,8 +15,6 @@ This repo is a part of the following:
 ## Configurations
 
 The backend supports compiling in func 0.2.0 and 0.3.0.
-It ships with a static version of fiftlib (will be updated from time to time) and a fift version corresponding to the release of FunC,
-hence verification response will include all 3 versions: FunC, fiftlib and fift.
 
 ## Preqrequisites
 
@@ -39,11 +37,10 @@ To deploy on heroku, you can use the [func compilation buildpack](https://github
     binaries/
       0.2.0/fift
       0.2.0/func
+      0.2.0/fiftlib (directory)
       0.3.0/fift
       0.3.0/func
-    fiftlib/
-      Asm.fif
-      Fift.fif
+      0.3.0/fiftlib (directory)
 ```
 
 ### Environment variables
