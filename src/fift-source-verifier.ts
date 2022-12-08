@@ -5,7 +5,7 @@ import { readFile, writeFile } from "fs/promises";
 import { CompileResult, FuncCompilerVersion, SourceVerifier, SourceVerifyPayload } from "./types";
 import path from "path";
 import { Cell } from "ton";
-import { fiftlibVersion, fiftVersions, funcCompilers } from "./binaries";
+import { funcCompilers } from "./binaries";
 
 export async function fiftToCodeCell(
   funcVersion: FuncCompilerVersion,
