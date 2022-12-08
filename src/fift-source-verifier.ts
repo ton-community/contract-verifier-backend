@@ -5,7 +5,7 @@ import { readFile, writeFile } from "fs/promises";
 import { CompileResult, FuncCompilerVersion, SourceVerifier, SourceVerifyPayload } from "./types";
 import path from "path";
 import { Cell } from "ton";
-import { fiftlibVersion, fiftVersions, funcCompilers } from "./binaries";
+import { funcCompilers } from "./binaries";
 
 export async function fiftToCodeCell(
   funcVersion: FuncCompilerVersion,
@@ -32,6 +32,7 @@ boc>B "${b64OutFile}" B>file`;
 export class FiftSourceVerifier implements SourceVerifier {
   async verify(payload: SourceVerifyPayload): Promise<CompileResult> {
     const funcVersion: FuncCompilerVersion = "0.3.0"; // Single version, assuming fift doesn't affect code hash
+    const sources = payload.sources.map((s) => ({ filename: s.path }));
 
     try {
       if (!process.env.ALLOW_FIFT) {
@@ -42,8 +43,6 @@ export class FiftSourceVerifier implements SourceVerifier {
       }
       const cell = await fiftToCodeCell(funcVersion, payload.sources[0].path, payload.tmpDir);
       const hash = cell.hash().toString("base64");
-
-      const sources = payload.sources.map((s) => ({ filename: s.path }));
 
       return {
         hash,
@@ -62,7 +61,7 @@ export class FiftSourceVerifier implements SourceVerifier {
         result: "unknown_error",
         error: e.toString(),
         compilerSettings: {
-          fiftVersion,
+          fiftVersion: funcVersion,
           commandLine: "",
         },
         sources,
