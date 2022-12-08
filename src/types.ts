@@ -13,19 +13,14 @@ export type VerifyResult = {
   msgCell?: Buffer;
 };
 
-export type UserProvidedFuncCompileSettings = {
+export type FuncCliCompileSettings = {
   funcVersion: FuncCompilerVersion;
   commandLine: string;
 };
 
-export type FuncCliCompileSettings = UserProvidedFuncCompileSettings & {
-  fiftVersion: string;
-  fiftlibVersion: string;
-};
-
 export type FiftCliCompileSettings = {
   fiftVersion: string;
-  fiftlibVersion: string;
+  commandLine: string;
 };
 
 export type FuncSourceCompileResult = {
@@ -62,7 +57,7 @@ export type SourceToVerify = {
 
 export type CompileOptions = {
   compiler: Compiler;
-  compilerSettings: UserProvidedFuncCompileSettings;
+  compilerSettings: FuncCliCompileSettings;
 };
 
 export type SourceVerifyPayload = CompileOptions & {

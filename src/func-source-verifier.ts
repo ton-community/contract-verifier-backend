@@ -1,17 +1,15 @@
 import { promisify } from "util";
 import { exec } from "child_process";
 const execAsync = promisify(exec);
-import { readFile, writeFile, readdir } from "fs/promises";
-import { Cell } from "ton";
 import {
   FuncCompilerVersion,
   SourceVerifier,
   SourceVerifyPayload,
   CompileResult,
-  UserProvidedFuncCompileSettings,
+  FuncCliCompileSettings,
 } from "./types";
 import path from "path";
-import { fiftlibVersion, fiftVersions, funcCompilers } from "./binaries";
+import { funcCompilers } from "./binaries";
 import { fiftToCodeCell } from "./fift-source-verifier";
 
 function prepareFuncCommand(
@@ -60,7 +58,7 @@ async function compileFuncToCodeHash(
 export class FuncSourceVerifier implements SourceVerifier {
   async verify(payload: SourceVerifyPayload): Promise<CompileResult> {
     let funcCmd: string | null = null;
-    const compilerSettings = payload.compilerSettings as UserProvidedFuncCompileSettings;
+    const compilerSettings = payload.compilerSettings as FuncCliCompileSettings;
 
     const sources = payload.sources.map((s) => ({
       filename: s.path,
@@ -87,8 +85,6 @@ export class FuncSourceVerifier implements SourceVerifier {
         compilerSettings: {
           funcVersion: compilerSettings.funcVersion,
           commandLine: funcCmd,
-          fiftlibVersion,
-          fiftVersion: fiftVersions[compilerSettings.funcVersion],
         },
         sources,
       };
@@ -100,8 +96,6 @@ export class FuncSourceVerifier implements SourceVerifier {
         compilerSettings: {
           funcVersion: compilerSettings.funcVersion,
           commandLine: funcCmd ?? "",
-          fiftlibVersion,
-          fiftVersion: fiftVersions[compilerSettings.funcVersion],
         },
         sources,
       };

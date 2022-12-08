@@ -32,20 +32,26 @@ boc>B "${b64OutFile}" B>file`;
 export class FiftSourceVerifier implements SourceVerifier {
   async verify(payload: SourceVerifyPayload): Promise<CompileResult> {
     const funcVersion: FuncCompilerVersion = "0.3.0"; // Single version, assuming fift doesn't affect code hash
-    const fiftVersion = fiftVersions[funcVersion];
-    const sources = payload.sources.map((s) => ({ filename: s.path }));
 
     try {
+      if (payload.sources.length !== 1) {
+        throw new Error("Only one source file is allowed for fift verification");
+      }
       const cell = await fiftToCodeCell(funcVersion, payload.sources[0].path, payload.tmpDir);
       const hash = cell.hash().toString("base64");
+
+      const sources = payload.sources.map((s) => ({ filename: s.path }));
+      if (sources.length !== 1) {
+        throw new Error("Only one source file is allowed for fift verification");
+      }
 
       return {
         hash,
         result: hash === payload.knownContractHash ? "similar" : "not_similar",
         error: null,
         compilerSettings: {
-          fiftlibVersion,
-          fiftVersion,
+          fiftVersion: funcVersion, // Fift is tied to a FunC version
+          commandLine: `echo '"${payload.sources[0].path}" include\nboc>B "output.cell" B>file' | fift`,
         },
         sources,
       };
@@ -56,8 +62,8 @@ export class FiftSourceVerifier implements SourceVerifier {
         result: "unknown_error",
         error: e.toString(),
         compilerSettings: {
-          fiftlibVersion,
           fiftVersion,
+          commandLine: "",
         },
         sources,
       };
