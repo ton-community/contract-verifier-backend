@@ -34,6 +34,9 @@ export class FiftSourceVerifier implements SourceVerifier {
     const funcVersion: FuncCompilerVersion = "0.3.0"; // Single version, assuming fift doesn't affect code hash
 
     try {
+      if (!process.env.ALLOW_FIFT) {
+        throw new Error("Fift is disabled");
+      }
       if (payload.sources.length !== 1) {
         throw new Error("Only one source file is allowed for fift verification");
       }
