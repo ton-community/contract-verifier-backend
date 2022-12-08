@@ -52,7 +52,6 @@ To deploy on heroku, you can use the [func compilation buildpack](https://github
 - `PRIVATE_KEY` - To sign its message cell with a private key, which is verified by the [verifier registry](https://github.com/ton-blockchain/TEPs/pull/91). Provide an ED25519 compatible private key.
 - `SOURCES_REGISTRY` - The address of the sources registry contract (default from .env)
 - `VERIFIER_ID` - Sources verifier id (default from .env)
-- `FIFTLIB_VERSION` - fiftlib version (default from .env)
 
 ## Running
 

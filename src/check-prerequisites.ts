@@ -7,7 +7,6 @@ export function checkPrerequisites() {
     "INFURA_ID",
     "INFURA_SECRET",
     "PRIVATE_KEY",
-    "FIFTLIB_VERSION",
   ]
     .filter((e) => !process.env[e])
     .join(" ");
