@@ -41,9 +41,6 @@ export class FiftSourceVerifier implements SourceVerifier {
       const hash = cell.hash().toString("base64");
 
       const sources = payload.sources.map((s) => ({ filename: s.path }));
-      if (sources.length !== 1) {
-        throw new Error("Only one source file is allowed for fift verification");
-      }
 
       return {
         hash,
