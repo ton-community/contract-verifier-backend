@@ -1,4 +1,12 @@
-import { SourceVerifier, SourceVerifyPayload, SourceToVerify, CompileResult } from "./types";
+import {
+  SourceVerifier,
+  SourceVerifyPayload,
+  SourceToVerify,
+  CompileResult,
+  FiftSourceCompileResult,
+  FuncSourceCompileResult,
+  TactSourceCompileResult,
+} from "./types";
 import path from "path";
 import tweetnacl from "tweetnacl";
 import { VerifyResult, Compiler } from "./types";
@@ -9,6 +17,7 @@ import { sha256, random64BitNumber, getNowHourRoundedDown } from "./utils";
 import { FuncSourceVerifier } from "./func-source-verifier";
 import { isProofDeployed } from "./is-proof-deployed";
 import { FiftSourceVerifier } from "./fift-source-verifier";
+import { TactSourceVerifier } from "./tact-source-verifier";
 
 export type Base64URL = string;
 
@@ -47,6 +56,7 @@ function verifierRegistryForwardMessage(
 const compilers: { [key in Compiler]: SourceVerifier } = {
   func: new FuncSourceVerifier(),
   fift: new FiftSourceVerifier(),
+  tact: new TactSourceVerifier(),
 };
 
 export class Controller {
@@ -66,11 +76,11 @@ export class Controller {
     // Compile
     const compiler = compilers[verificationPayload.compiler];
     const compileResult = await compiler.verify(verificationPayload);
-    if (compileResult.error || compileResult.result !== "similar" || !compileResult.hash) {
-      return {
-        compileResult,
-      };
-    }
+    // if (compileResult.error || compileResult.result !== "similar" || !compileResult.hash) {
+    //   return {
+    //     compileResult,
+    //   };
+    // }
 
     if (!process.env.ALLOW_REVERIFICATION) {
       const isDeployed = await isProofDeployed(verificationPayload.knownContractHash);
@@ -88,10 +98,12 @@ export class Controller {
     }
 
     // Upload sources to IPFS
-    const sourcesToUpload = verificationPayload.sources.map((s: SourceToVerify) => ({
-      path: path.join(verificationPayload.tmpDir, s.path),
-      name: s.path,
-    }));
+    const sourcesToUpload = compileResult.sources.map(
+      (s: FuncSourceCompileResult | FiftSourceCompileResult | TactSourceCompileResult) => ({
+        path: path.join(verificationPayload.tmpDir, s.filename),
+        name: s.filename,
+      }),
+    );
     const fileLocators = await this.#ipfsProvider.write(...sourcesToUpload);
 
     const sourceSpec = {
