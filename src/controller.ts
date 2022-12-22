@@ -1,10 +1,10 @@
-import { SourceVerifier, SourceVerifyPayload, SourceToVerify, CompileResult } from "./types";
+import { SourceVerifier, SourceVerifyPayload, SourceToVerify } from "./types";
 import path from "path";
 import tweetnacl from "tweetnacl";
 import { VerifyResult, Compiler } from "./types";
 import { Address, beginCell, Cell } from "ton";
 import BN from "bn.js";
-import { IpfsCodeStorageProvider } from "./ipfs-code-storage-provider";
+import { CodeStorageProvider } from "./ipfs-code-storage-provider";
 import { sha256, random64BitNumber, getNowHourRoundedDown } from "./utils";
 import { FuncSourceVerifier } from "./func-source-verifier";
 import { isProofDeployed } from "./is-proof-deployed";
@@ -44,21 +44,33 @@ function verifierRegistryForwardMessage(
     .toBoc();
 }
 
-const compilers: { [key in Compiler]: SourceVerifier } = {
-  func: new FuncSourceVerifier(),
-  fift: new FiftSourceVerifier(),
-};
-
+interface ControllerConfig {
+  verifierId: string;
+  privateKey: string;
+  sourcesRegistryAddress: string;
+  allowReverification: boolean;
+}
 export class Controller {
-  #ipfsProvider: IpfsCodeStorageProvider;
+  #ipfsProvider: CodeStorageProvider;
   #keypair: tweetnacl.SignKeyPair;
   #VERIFIER_SHA256: Buffer;
+  config: ControllerConfig;
+  compilers: { [key in Compiler]: SourceVerifier };
 
-  constructor(ipfsProvider: IpfsCodeStorageProvider) {
-    this.#VERIFIER_SHA256 = sha256(process.env.VERIFIER_ID!);
+  constructor(
+    ipfsProvider: CodeStorageProvider,
+    compilers: { [key in Compiler]: SourceVerifier } = {
+      func: new FuncSourceVerifier(),
+      fift: new FiftSourceVerifier(),
+    },
+    config: ControllerConfig,
+  ) {
+    this.#VERIFIER_SHA256 = sha256(config.verifierId);
+    this.config = config;
+    this.compilers = compilers;
     this.#ipfsProvider = ipfsProvider;
     this.#keypair = tweetnacl.sign.keyPair.fromSecretKey(
-      Buffer.from(process.env.PRIVATE_KEY!, "base64"),
+      Buffer.from(this.config.privateKey, "base64"),
     );
   }
 
@@ -72,7 +84,7 @@ export class Controller {
       };
     }
 
-    if (!process.env.ALLOW_REVERIFICATION) {
+    if (!this.config.allowReverification) {
       const isDeployed = await isProofDeployed(verificationPayload.knownContractHash);
       if (isDeployed) {
         return {
@@ -123,6 +135,7 @@ export class Controller {
       queryId,
       compileResult.hash!,
       ipfsLink,
+      this.config.sourcesRegistryAddress,
     );
 
     const { sig, sigCell } = this.signatureCell(msgToSign);
@@ -135,6 +148,10 @@ export class Controller {
     };
   }
 
+  public async sign({ messageCell }: { messageCell: Buffer }) {
+    throw new Error("Not implemented");
+  }
+
   private signatureCell(msgToSign: Cell) {
     const sig = Buffer.from(tweetnacl.sign.detached(msgToSign.hash(), this.#keypair.secretKey));
 
@@ -145,12 +162,18 @@ export class Controller {
     return { sig, sigCell };
   }
 
-  private cellToSign(senderAddress: string, queryId: BN, codeCellHash: string, ipfsLink: string) {
+  private cellToSign(
+    senderAddress: string,
+    queryId: BN,
+    codeCellHash: string,
+    ipfsLink: string,
+    sourcesRegistry: string,
+  ) {
     return beginCell()
       .storeBuffer(this.#VERIFIER_SHA256)
       .storeUint(Math.floor(Date.now() / 1000) + 60 * 10, 32) // Valid until 10 minutes from now
       .storeAddress(Address.parse(senderAddress))
-      .storeAddress(Address.parse(process.env.SOURCES_REGISTRY!))
+      .storeAddress(Address.parse(sourcesRegistry))
       .storeRef(deploySource(queryId, codeCellHash, ipfsLink, this.#VERIFIER_SHA256))
       .endCell();
   }

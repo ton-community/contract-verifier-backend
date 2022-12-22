@@ -15,6 +15,8 @@ import idMiddleware from "./req-id-middleware";
 import { IpfsCodeStorageProvider } from "./ipfs-code-storage-provider";
 import rateLimit from "express-rate-limit";
 import { checkPrerequisites } from "./check-prerequisites";
+import { FiftSourceVerifier } from "./fift-source-verifier";
+import { FuncSourceVerifier } from "./func-source-verifier";
 
 const app = express();
 app.use(idMiddleware());
@@ -23,7 +25,19 @@ app.use(express.json());
 
 checkPrerequisites();
 
-const controller = new Controller(new IpfsCodeStorageProvider());
+const controller = new Controller(
+  new IpfsCodeStorageProvider(),
+  {
+    func: new FuncSourceVerifier(),
+    fift: new FiftSourceVerifier(),
+  },
+  {
+    verifierId: process.env.VERIFIER_ID!,
+    allowReverification: !!process.env.ALLOW_REVERIFICATION,
+    privateKey: process.env.PRIVATE_KEY!,
+    sourcesRegistryAddress: process.env.SOURCES_REGISTRY_ADDRESS!,
+  },
+);
 
 const limiter = rateLimit({
   windowMs: 5 * 60 * 1000, // 5 minutes
@@ -101,6 +115,13 @@ app.post(
     res.json(result);
   },
 );
+
+app.post("/sign", limiter, async (req, res) => {
+  const result = await controller.sign({
+    messageCell: req.body.messageCell,
+  });
+  res.json(result);
+});
 
 app.listen(port, () => {
   console.log(`Ton Contract Verifier Server running on ${port}`);
