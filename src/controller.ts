@@ -76,11 +76,11 @@ export class Controller {
     // Compile
     const compiler = compilers[verificationPayload.compiler];
     const compileResult = await compiler.verify(verificationPayload);
-    // if (compileResult.error || compileResult.result !== "similar" || !compileResult.hash) {
-    //   return {
-    //     compileResult,
-    //   };
-    // }
+    if (compileResult.error || compileResult.result !== "similar" || !compileResult.hash) {
+      return {
+        compileResult,
+      };
+    }
 
     if (!process.env.ALLOW_REVERIFICATION) {
       const isDeployed = await isProofDeployed(verificationPayload.knownContractHash);
