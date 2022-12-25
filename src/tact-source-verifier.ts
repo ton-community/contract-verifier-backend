@@ -28,7 +28,7 @@ export class TactSourceVerifier implements SourceVerifier {
     const bocFilename = dirContents.filter((x) => x.endsWith(".boc"))?.[0];
     const abiFilename = dirContents.filter((x) => x.endsWith(".abi"))?.[0];
 
-    if (res.stderr || !bocFilename || !abiFilename) {
+    if (!bocFilename || !abiFilename) {
       return {
         compilerSettings: { tactVersion: "0.4.0" },
         error: res.stderr,
