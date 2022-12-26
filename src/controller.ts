@@ -13,8 +13,11 @@ import BN from "bn.js";
 import { CodeStorageProvider } from "./ipfs-code-storage-provider";
 import { sha256, random64BitNumber, getNowHourRoundedDown } from "./utils";
 import { TonReaderClient } from "./is-proof-deployed";
+import { validateMessageCell } from "./validateMessageCell";
 
 export type Base64URL = string;
+
+export const DEPLOY_SOURCE_OP = 1002;
 
 function deploySource(
   queryId: BN,
@@ -34,13 +37,15 @@ function deploySource(
     .endCell();
 }
 
+export const FORWARD_MESSAGE_OP = 0x75217758;
+
 function verifierRegistryForwardMessage(
   queryId: BN,
   msgToSign: Cell,
   sigCell: Cell,
 ): Buffer | undefined {
   return beginCell()
-    .storeUint(0x75217758, 32) // Forward message
+    .storeUint(FORWARD_MESSAGE_OP, 32) // Forward message
     .storeUint(queryId, 64)
     .storeRef(msgToSign)
     .storeRef(sigCell)
@@ -160,7 +165,8 @@ export class Controller {
   }
 
   public async sign({ messageCell }: { messageCell: Buffer }) {
-    throw new Error("Not implemented");
+    const cell = Cell.fromBoc(messageCell)[0];
+    validateMessageCell(cell, this.#VERIFIER_SHA256, this.config.sourcesRegistryAddress);
   }
 
   private signatureCell(msgToSign: Cell) {

@@ -27,6 +27,7 @@
   "scripts": {
     "__prebuild": "tslint -p tsconfig.json --fix",
     "build": "tsc --noEmit",
+    "test": "jest",
     "__prestart": "npm run build",
     "start": "ts-node --transpile-only src/server",
     "prepare": "husky install"
