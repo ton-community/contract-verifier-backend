@@ -5,7 +5,7 @@ import { of as ipfsHash } from "ipfs-only-hash";
 import tweetnacl from "tweetnacl";
 import { CompileResult, SourceVerifier, SourceVerifyPayload } from "../src/types";
 import { beginCell, Cell, Address } from "ton";
-import { TonReaderClient } from "../src/is-proof-deployed";
+import { TonReaderClient, VerifierConfig } from "../src/ton-reader-client";
 import { sha256 } from "../src/utils";
 import Prando from "prando";
 
@@ -49,6 +49,15 @@ class StubSourceVerifier implements SourceVerifier {
 }
 
 class StubTonReaderClient implements TonReaderClient {
+  async getVerifierConfig(
+    verifierId: string,
+    verifierRegistryAddress: string,
+  ): Promise<VerifierConfig> {
+    return {
+      quorum: 1,
+      verifiers: ["X"],
+    };
+  }
   async isProofDeployed(
     codeCellHash: string,
     sourcesRegistryAddress: string,
@@ -75,6 +84,7 @@ describe("Controller", () => {
         allowReverification: false,
         sourcesRegistryAddress: randomAddress("sourcesReg").toFriendly(),
         verifierId: VERIFIER_ID,
+        verifierRegistryAddress: randomAddress("verifierReg").toFriendly(),
       },
       new StubTonReaderClient(),
     );
@@ -333,6 +343,7 @@ describe("Controller", () => {
     //   it("Sig does not belong to verifier id", async () => {
     //     throw "Not implemented";
     //   });
+    //   it("Only one in quorum", async () => {});
     // });
 
     // describe("Invalid compilation results", () => {

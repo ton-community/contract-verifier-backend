@@ -12,7 +12,7 @@ import { Address, beginCell, Cell, TonClient } from "ton";
 import BN from "bn.js";
 import { CodeStorageProvider } from "./ipfs-code-storage-provider";
 import { sha256, random64BitNumber, getNowHourRoundedDown } from "./utils";
-import { TonReaderClient } from "./is-proof-deployed";
+import { TonReaderClient } from "./ton-reader-client";
 import { validateMessageCell } from "./validateMessageCell";
 
 export type Base64URL = string;
@@ -58,6 +58,7 @@ interface ControllerConfig {
   privateKey: string;
   sourcesRegistryAddress: string;
   allowReverification: boolean;
+  verifierRegistryAddress: string;
 }
 
 export class Controller {
