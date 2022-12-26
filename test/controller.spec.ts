@@ -333,18 +333,21 @@ describe("Controller", () => {
       });
     });
 
-    // describe("Invalid signatures", () => {
-    //   it("Invalid signature", async () => {
-    //     throw "Not implemented";
-    //   });
-    //   it("My own sig", async () => {
-    //     throw "Not implemented";
-    //   });
-    //   it("Sig does not belong to verifier id", async () => {
-    //     throw "Not implemented";
-    //   });
-    //   it("Only one in quorum", async () => {});
-    // });
+    describe("Invalid signatures", () => {
+      it("Invalid signature", async () => {
+        throw "Not implemented";
+      });
+      it("Signature does not match cell", async () => {
+        throw "Not implemented";
+      });
+      it("My own sig", async () => {
+        throw "Not implemented";
+      });
+      it("Sig does not belong to verifier id", async () => {
+        throw "Not implemented";
+      });
+      it("Only one in quorum", async () => {});
+    });
 
     // describe("Invalid compilation results", () => {
     //   it("Different code hash", async () => {
