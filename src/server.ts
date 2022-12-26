@@ -17,6 +17,10 @@ import rateLimit from "express-rate-limit";
 import { checkPrerequisites } from "./check-prerequisites";
 import { FiftSourceVerifier } from "./fift-source-verifier";
 import { FuncSourceVerifier } from "./func-source-verifier";
+import { TactSourceVerifier } from "./tact-source-verifier";
+import { getHttpEndpoint } from "@orbs-network/ton-gateway";
+import { TonClient } from "ton";
+import { TonReaderClientImpl } from "./is-proof-deployed";
 
 const app = express();
 app.use(idMiddleware());
@@ -24,13 +28,6 @@ app.use(cors());
 app.use(express.json());
 
 checkPrerequisites();
-
-const controller = new Controller(new IpfsCodeStorageProvider(), {
-  verifierId: process.env.VERIFIER_ID!,
-  allowReverification: !!process.env.ALLOW_REVERIFICATION,
-  privateKey: process.env.PRIVATE_KEY!,
-  sourcesRegistryAddress: process.env.SOURCES_REGISTRY_ADDRESS!,
-});
 
 const limiter = rateLimit({
   windowMs: 5 * 60 * 1000, // 5 minutes
@@ -80,46 +77,67 @@ app.get("/hc", (req, res) => {
   res.send("ok");
 });
 
-app.post(
-  "/source",
-  limiter,
-  async (req, _, next) => {
-    await mkdirp(path.join(TMP_DIR, req.id));
-    next();
-  },
-  upload.any(),
-  async (req, res) => {
-    const jsonFile = (req.files! as any[]).find((f) => f.fieldname === "json").path;
+(async () => {
+  const endpoint = await getHttpEndpoint();
+  const tc = new TonClient({ endpoint });
 
-    const jsonData = await readFile(jsonFile);
-    const body = JSON.parse(jsonData.toString());
+  const controller = new Controller(
+    new IpfsCodeStorageProvider(),
+    {
+      func: new FuncSourceVerifier(),
+      fift: new FiftSourceVerifier(),
+      tact: new TactSourceVerifier(),
+    },
+    {
+      verifierId: process.env.VERIFIER_ID!,
+      allowReverification: !!process.env.ALLOW_REVERIFICATION,
+      privateKey: process.env.PRIVATE_KEY!,
+      sourcesRegistryAddress: process.env.SOURCES_REGISTRY_ADDRESS!,
+    },
+    new TonReaderClientImpl(tc),
+  );
 
-    const result = await controller.addSource({
-      compiler: body.compiler,
-      compilerSettings: body.compilerSettings,
-      sources: (req.files! as any[])
-        .filter((f: any) => f.fieldname !== "json")
-        .map((f, i) => ({
-          path: f.fieldname,
-          ...body.sources[i],
-        })),
-      knownContractAddress: body.knownContractAddress,
-      knownContractHash: body.knownContractHash,
-      tmpDir: path.join(TMP_DIR, req.id),
-      senderAddress: body.senderAddress,
+  app.post(
+    "/source",
+    limiter,
+    async (req, _, next) => {
+      await mkdirp(path.join(TMP_DIR, req.id));
+      next();
+    },
+    upload.any(),
+    async (req, res) => {
+      const jsonFile = (req.files! as any[]).find((f) => f.fieldname === "json").path;
+
+      const jsonData = await readFile(jsonFile);
+      const body = JSON.parse(jsonData.toString());
+
+      const result = await controller.addSource({
+        compiler: body.compiler,
+        compilerSettings: body.compilerSettings,
+        sources: (req.files! as any[])
+          .filter((f: any) => f.fieldname !== "json")
+          .map((f, i) => ({
+            path: f.fieldname,
+            ...body.sources[i],
+          })),
+        knownContractAddress: body.knownContractAddress,
+        knownContractHash: body.knownContractHash,
+        tmpDir: path.join(TMP_DIR, req.id),
+        senderAddress: body.senderAddress,
+      });
+
+      res.json(result);
+    },
+  );
+
+  app.post("/sign", limiter, async (req, res) => {
+    const result = await controller.sign({
+      messageCell: req.body.messageCell,
     });
-
     res.json(result);
-  },
-);
-
-app.post("/sign", limiter, async (req, res) => {
-  const result = await controller.sign({
-    messageCell: req.body.messageCell,
   });
-  res.json(result);
-});
 
-app.listen(port, () => {
-  console.log(`Ton Contract Verifier Server running on ${port}`);
-});
+  app.listen(port, () => {
+    console.log(`Ton Contract Verifier Server running on ${port}`);
+  });
+})();

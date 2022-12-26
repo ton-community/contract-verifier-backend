@@ -8,14 +8,11 @@ import {
 import path from "path";
 import tweetnacl from "tweetnacl";
 import { VerifyResult, Compiler } from "./types";
-import { Address, beginCell, Cell } from "ton";
+import { Address, beginCell, Cell, TonClient } from "ton";
 import BN from "bn.js";
 import { CodeStorageProvider } from "./ipfs-code-storage-provider";
 import { sha256, random64BitNumber, getNowHourRoundedDown } from "./utils";
-import { FuncSourceVerifier } from "./func-source-verifier";
-import { isProofDeployed } from "./is-proof-deployed";
-import { FiftSourceVerifier } from "./fift-source-verifier";
-import { TactSourceVerifier } from "./tact-source-verifier";
+import { TonReaderClient } from "./is-proof-deployed";
 
 export type Base64URL = string;
 
@@ -57,11 +54,6 @@ interface ControllerConfig {
   sourcesRegistryAddress: string;
   allowReverification: boolean;
 }
-const compilers: { [key in Compiler]: SourceVerifier } = {
-  func: new FuncSourceVerifier(),
-  fift: new FiftSourceVerifier(),
-  tact: new TactSourceVerifier(),
-};
 
 export class Controller {
   #ipfsProvider: CodeStorageProvider;
@@ -69,8 +61,14 @@ export class Controller {
   #VERIFIER_SHA256: Buffer;
   config: ControllerConfig;
   compilers: { [key in Compiler]: SourceVerifier };
+  tonReaderClient: TonReaderClient;
 
-  constructor(ipfsProvider: CodeStorageProvider, config: ControllerConfig) {
+  constructor(
+    ipfsProvider: CodeStorageProvider,
+    compilers: { [key in Compiler]: SourceVerifier },
+    config: ControllerConfig,
+    tonReaderClient: TonReaderClient,
+  ) {
     this.#VERIFIER_SHA256 = sha256(config.verifierId);
     this.config = config;
     this.compilers = compilers;
@@ -78,11 +76,12 @@ export class Controller {
     this.#keypair = tweetnacl.sign.keyPair.fromSecretKey(
       Buffer.from(this.config.privateKey, "base64"),
     );
+    this.tonReaderClient = tonReaderClient;
   }
 
   async addSource(verificationPayload: SourceVerifyPayload): Promise<VerifyResult> {
     // Compile
-    const compiler = compilers[verificationPayload.compiler];
+    const compiler = this.compilers[verificationPayload.compiler];
     const compileResult = await compiler.verify(verificationPayload);
     if (compileResult.error || compileResult.result !== "similar" || !compileResult.hash) {
       return {
@@ -91,7 +90,11 @@ export class Controller {
     }
 
     if (!this.config.allowReverification) {
-      const isDeployed = await isProofDeployed(verificationPayload.knownContractHash);
+      const isDeployed = await this.tonReaderClient.isProofDeployed(
+        verificationPayload.knownContractHash,
+        this.config.sourcesRegistryAddress,
+        this.config.verifierId,
+      );
       if (isDeployed) {
         return {
           compileResult: {
