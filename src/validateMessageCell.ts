@@ -69,7 +69,8 @@ export function validateMessageCell(
     throw new Error("Invalid operation");
   }
 
-  const _ = slice.readUint(64);
+  slice.skip(64);
 
   validateVerifierRegistryBodyCell(slice.readRef(), verifierId, sourcesRegistryAddress);
+  // validateSignatureCell(slice.readRef());
 }

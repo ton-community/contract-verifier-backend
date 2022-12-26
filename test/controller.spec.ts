@@ -323,26 +323,26 @@ describe("Controller", () => {
       });
     });
 
-    describe("Invalid signatures", () => {
-      it("Invalid signature", async () => {
-        throw "Not implemented";
-      });
-      it("My own sig", async () => {
-        throw "Not implemented";
-      });
-      it("Sig does not belong to verifier id", async () => {
-        throw "Not implemented";
-      });
-    });
+    // describe("Invalid signatures", () => {
+    //   it("Invalid signature", async () => {
+    //     throw "Not implemented";
+    //   });
+    //   it("My own sig", async () => {
+    //     throw "Not implemented";
+    //   });
+    //   it("Sig does not belong to verifier id", async () => {
+    //     throw "Not implemented";
+    //   });
+    // });
 
-    describe("Invalid compilation results", () => {
-      it("Different code hash", async () => {
-        throw "Not implemented";
-      });
-      it("Does not compile", async () => {
-        throw "Not implemented";
-      });
-    });
+    // describe("Invalid compilation results", () => {
+    //   it("Different code hash", async () => {
+    //     throw "Not implemented";
+    //   });
+    //   it("Does not compile", async () => {
+    //     throw "Not implemented";
+    //   });
+    // });
   });
 });
 
