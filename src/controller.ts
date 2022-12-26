@@ -1,8 +1,6 @@
 import {
   SourceVerifier,
   SourceVerifyPayload,
-  SourceToVerify,
-  CompileResult,
   FiftSourceCompileResult,
   FuncSourceCompileResult,
   TactSourceCompileResult,
@@ -10,16 +8,16 @@ import {
 import path from "path";
 import tweetnacl from "tweetnacl";
 import { VerifyResult, Compiler } from "./types";
-import { Address, beginCell, Cell } from "ton";
+import { Address, beginCell, Cell, TonClient } from "ton";
 import BN from "bn.js";
-import { IpfsCodeStorageProvider } from "./ipfs-code-storage-provider";
+import { CodeStorageProvider } from "./ipfs-code-storage-provider";
 import { sha256, random64BitNumber, getNowHourRoundedDown } from "./utils";
-import { FuncSourceVerifier } from "./func-source-verifier";
-import { isProofDeployed } from "./is-proof-deployed";
-import { FiftSourceVerifier } from "./fift-source-verifier";
-import { TactSourceVerifier } from "./tact-source-verifier";
+import { TonReaderClient } from "./is-proof-deployed";
+import { validateMessageCell } from "./validateMessageCell";
 
 export type Base64URL = string;
+
+export const DEPLOY_SOURCE_OP = 1002;
 
 function deploySource(
   queryId: BN,
@@ -39,13 +37,15 @@ function deploySource(
     .endCell();
 }
 
+export const FORWARD_MESSAGE_OP = 0x75217758;
+
 function verifierRegistryForwardMessage(
   queryId: BN,
   msgToSign: Cell,
   sigCell: Cell,
 ): Buffer | undefined {
   return beginCell()
-    .storeUint(0x75217758, 32) // Forward message
+    .storeUint(FORWARD_MESSAGE_OP, 32) // Forward message
     .storeUint(queryId, 64)
     .storeRef(msgToSign)
     .storeRef(sigCell)
@@ -53,28 +53,40 @@ function verifierRegistryForwardMessage(
     .toBoc();
 }
 
-const compilers: { [key in Compiler]: SourceVerifier } = {
-  func: new FuncSourceVerifier(),
-  fift: new FiftSourceVerifier(),
-  tact: new TactSourceVerifier(),
-};
+interface ControllerConfig {
+  verifierId: string;
+  privateKey: string;
+  sourcesRegistryAddress: string;
+  allowReverification: boolean;
+}
 
 export class Controller {
-  #ipfsProvider: IpfsCodeStorageProvider;
+  #ipfsProvider: CodeStorageProvider;
   #keypair: tweetnacl.SignKeyPair;
   #VERIFIER_SHA256: Buffer;
+  config: ControllerConfig;
+  compilers: { [key in Compiler]: SourceVerifier };
+  tonReaderClient: TonReaderClient;
 
-  constructor(ipfsProvider: IpfsCodeStorageProvider) {
-    this.#VERIFIER_SHA256 = sha256(process.env.VERIFIER_ID!);
+  constructor(
+    ipfsProvider: CodeStorageProvider,
+    compilers: { [key in Compiler]: SourceVerifier },
+    config: ControllerConfig,
+    tonReaderClient: TonReaderClient,
+  ) {
+    this.#VERIFIER_SHA256 = sha256(config.verifierId);
+    this.config = config;
+    this.compilers = compilers;
     this.#ipfsProvider = ipfsProvider;
     this.#keypair = tweetnacl.sign.keyPair.fromSecretKey(
-      Buffer.from(process.env.PRIVATE_KEY!, "base64"),
+      Buffer.from(this.config.privateKey, "base64"),
     );
+    this.tonReaderClient = tonReaderClient;
   }
 
   async addSource(verificationPayload: SourceVerifyPayload): Promise<VerifyResult> {
     // Compile
-    const compiler = compilers[verificationPayload.compiler];
+    const compiler = this.compilers[verificationPayload.compiler];
     const compileResult = await compiler.verify(verificationPayload);
     if (compileResult.error || compileResult.result !== "similar" || !compileResult.hash) {
       return {
@@ -82,8 +94,12 @@ export class Controller {
       };
     }
 
-    if (!process.env.ALLOW_REVERIFICATION) {
-      const isDeployed = await isProofDeployed(verificationPayload.knownContractHash);
+    if (!this.config.allowReverification) {
+      const isDeployed = await this.tonReaderClient.isProofDeployed(
+        verificationPayload.knownContractHash,
+        this.config.sourcesRegistryAddress,
+        this.config.verifierId,
+      );
       if (isDeployed) {
         return {
           compileResult: {
@@ -135,6 +151,7 @@ export class Controller {
       queryId,
       compileResult.hash!,
       ipfsLink,
+      this.config.sourcesRegistryAddress,
     );
 
     const { sig, sigCell } = this.signatureCell(msgToSign);
@@ -147,6 +164,11 @@ export class Controller {
     };
   }
 
+  public async sign({ messageCell }: { messageCell: Buffer }) {
+    const cell = Cell.fromBoc(messageCell)[0];
+    validateMessageCell(cell, this.#VERIFIER_SHA256, this.config.sourcesRegistryAddress);
+  }
+
   private signatureCell(msgToSign: Cell) {
     const sig = Buffer.from(tweetnacl.sign.detached(msgToSign.hash(), this.#keypair.secretKey));
 
@@ -157,12 +179,18 @@ export class Controller {
     return { sig, sigCell };
   }
 
-  private cellToSign(senderAddress: string, queryId: BN, codeCellHash: string, ipfsLink: string) {
+  private cellToSign(
+    senderAddress: string,
+    queryId: BN,
+    codeCellHash: string,
+    ipfsLink: string,
+    sourcesRegistry: string,
+  ) {
     return beginCell()
       .storeBuffer(this.#VERIFIER_SHA256)
       .storeUint(Math.floor(Date.now() / 1000) + 60 * 10, 32) // Valid until 10 minutes from now
       .storeAddress(Address.parse(senderAddress))
-      .storeAddress(Address.parse(process.env.SOURCES_REGISTRY!))
+      .storeAddress(Address.parse(sourcesRegistry))
       .storeRef(deploySource(queryId, codeCellHash, ipfsLink, this.#VERIFIER_SHA256))
       .endCell();
   }

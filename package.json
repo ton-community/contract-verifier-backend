@@ -20,12 +20,14 @@
     "ton": "^12.0.0",
     "ton-tact": "^0.4.0",
     "ts-node": "^10.9.1",
+    "ts-sinon": "^2.0.2",
     "tweetnacl": "^1.0.3",
     "typescript": "^4.8.4"
   },
   "scripts": {
     "__prebuild": "tslint -p tsconfig.json --fix",
     "build": "tsc --noEmit",
+    "test": "jest",
     "__prestart": "npm run build",
     "start": "ts-node --transpile-only src/server",
     "prepare": "husky install"
