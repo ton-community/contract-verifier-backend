@@ -2,12 +2,19 @@ import { Address, Cell, TonClient } from "ton";
 import BN from "bn.js";
 import { sha256 } from "./utils";
 
+export type VerifierConfig = {
+  verifiers: string[];
+  quorum: number;
+};
+
 export interface TonReaderClient {
   isProofDeployed(
     codeCellHash: string,
     sourcesRegistryAddress: string,
     verifierId: string,
   ): Promise<boolean | undefined>;
+
+  getVerifierConfig(verifierId: string, verifierRegistryAddress: string): Promise<VerifierConfig>;
 }
 
 // TODO - copied from contract-verifier-sdk
@@ -16,6 +23,31 @@ export class TonReaderClientImpl implements TonReaderClient {
   tonClient: TonClient;
   constructor(tc: TonClient) {
     this.tonClient = tc;
+  }
+
+  async getVerifierConfig(
+    verifierId: string,
+    verifierRegistryAddress: string,
+  ): Promise<VerifierConfig> {
+    const res = await this.tonClient.callGetMethod(
+      Address.parse(verifierRegistryAddress),
+      "get_verifier",
+      [["num", new BN(sha256(verifierId)).toString()]],
+    );
+
+    const verifierConfig = Cell.fromBoc(
+      Buffer.from(res.stack[1][1].bytes, "base64"),
+    )[0].beginParse();
+
+    const quorum = verifierConfig.readUint(8).toNumber();
+    const verifiers = Array.from(verifierConfig.readDict(256, (pkE) => null).keys()).map((k) =>
+      new BN(k).toBuffer().toString("base64"),
+    );
+
+    return {
+      verifiers,
+      quorum,
+    };
   }
 
   async isProofDeployed(

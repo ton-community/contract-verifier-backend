@@ -20,7 +20,7 @@ import { FuncSourceVerifier } from "./func-source-verifier";
 import { TactSourceVerifier } from "./tact-source-verifier";
 import { getHttpEndpoint } from "@orbs-network/ton-gateway";
 import { TonClient } from "ton";
-import { TonReaderClientImpl } from "./is-proof-deployed";
+import { TonReaderClientImpl } from "./ton-reader-client";
 
 const app = express();
 app.use(idMiddleware());
@@ -93,6 +93,7 @@ app.get("/hc", (req, res) => {
       allowReverification: !!process.env.ALLOW_REVERIFICATION,
       privateKey: process.env.PRIVATE_KEY!,
       sourcesRegistryAddress: process.env.SOURCES_REGISTRY_ADDRESS!,
+      verifierRegistryAddress: process.env.VERIFIER_REGISTRY_ADDRESS!,
     },
     new TonReaderClientImpl(tc),
   );

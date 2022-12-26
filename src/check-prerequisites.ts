@@ -4,6 +4,7 @@ import { funcCompilers } from "./binaries";
 export function checkPrerequisites() {
   const missingEnvVars = [
     "VERIFIER_ID",
+    "VERIFIER_REGISTRY",
     "SOURCES_REGISTRY",
     "INFURA_ID",
     "INFURA_SECRET",
