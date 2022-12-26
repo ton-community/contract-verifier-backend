@@ -1,4 +1,4 @@
-export type Compiler = "func" | "fift";
+export type Compiler = "func" | "fift" | "tact";
 
 export type FuncCompilerVersion = "0.2.0" | "0.3.0";
 
@@ -23,6 +23,10 @@ export type FiftCliCompileSettings = {
   commandLine: string;
 };
 
+export type TactCliCompileSettings = {
+  tactVersion: "0.4.0";
+};
+
 export type FuncSourceCompileResult = {
   includeInCommand: boolean;
   isEntrypoint: boolean;
@@ -35,12 +39,17 @@ export type FiftSourceCompileResult = {
   filename: string;
 };
 
+export type TactSourceCompileResult = {
+  filename: string;
+  type: "code" | "abi";
+};
+
 export type CompileResult = {
   result: "similar" | "not_similar" | "compile_error" | "unknown_error";
   error: string | null;
   hash: string | null;
-  compilerSettings: FuncCliCompileSettings | FiftCliCompileSettings;
-  sources: (FuncSourceCompileResult | FiftSourceCompileResult)[];
+  compilerSettings: FuncCliCompileSettings | FiftCliCompileSettings | TactCliCompileSettings;
+  sources: (FuncSourceCompileResult | FiftSourceCompileResult | TactSourceCompileResult)[];
 };
 
 type Path = string;

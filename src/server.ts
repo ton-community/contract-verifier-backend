@@ -25,19 +25,12 @@ app.use(express.json());
 
 checkPrerequisites();
 
-const controller = new Controller(
-  new IpfsCodeStorageProvider(),
-  {
-    func: new FuncSourceVerifier(),
-    fift: new FiftSourceVerifier(),
-  },
-  {
-    verifierId: process.env.VERIFIER_ID!,
-    allowReverification: !!process.env.ALLOW_REVERIFICATION,
-    privateKey: process.env.PRIVATE_KEY!,
-    sourcesRegistryAddress: process.env.SOURCES_REGISTRY_ADDRESS!,
-  },
-);
+const controller = new Controller(new IpfsCodeStorageProvider(), {
+  verifierId: process.env.VERIFIER_ID!,
+  allowReverification: !!process.env.ALLOW_REVERIFICATION,
+  privateKey: process.env.PRIVATE_KEY!,
+  sourcesRegistryAddress: process.env.SOURCES_REGISTRY_ADDRESS!,
+});
 
 const limiter = rateLimit({
   windowMs: 5 * 60 * 1000, // 5 minutes
@@ -69,6 +62,10 @@ const upload = multer({
 });
 
 app.use((req, res, next) => {
+  if (process.env.DISABLE_RM) {
+    next();
+    return;
+  }
   res.on("close", async () => {
     if (req.files) {
       rm(path.join(TMP_DIR, req.id), { recursive: true, force: true });
