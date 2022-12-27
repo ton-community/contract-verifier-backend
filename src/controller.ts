@@ -181,7 +181,7 @@ export class Controller {
       this.config.verifierRegistryAddress,
     );
 
-    const { ipfsPointer, codeCellHash, senderAddress, date } = validateMessageCell(
+    const { ipfsPointer, codeCellHash, senderAddress, date, queryId } = validateMessageCell(
       cell,
       this.VERIFIER_SHA256,
       this.config.sourcesRegistryAddress,
@@ -190,8 +190,20 @@ export class Controller {
     );
 
     const json: SourceItem = JSON.parse(await this.ipfsProvider.read(ipfsPointer));
+
+    if (json.verificationDate !== date) {
+      throw new Error("Verification date mismatch");
+    }
+
+    if (json.hash !== codeCellHash) {
+      throw new Error("Code hash mismatch");
+    }
+
     const compiler = this.compilers[json.compiler];
 
+    // TODO this part won't work past the unit tests
+    // Need to persist sources to disk and pass the path to the compiler
+    // Or maybe just pass the content to the compiler and let it handle it
     const sources = await Promise.all(
       json.sources.map((s) => {
         const content = this.ipfsProvider.read(s.url);
@@ -213,7 +225,30 @@ export class Controller {
       senderAddress: senderAddress.toFriendly(),
     };
 
-    compiler.verify(sourceToVerify);
+    const compileResult = await compiler.verify(sourceToVerify);
+
+    if (compileResult.result !== "similar") {
+      throw new Error("Invalid compilation result");
+    }
+
+    let mostDeepSigCell = cell.refs[1];
+
+    while (true) {
+      if (mostDeepSigCell.refs.length === 0) {
+        break;
+      } else if (mostDeepSigCell.refs.length > 1) {
+        throw new Error("Invalid signature cell");
+      }
+      mostDeepSigCell = mostDeepSigCell.refs[0];
+    }
+
+    const { sigCell } = this.signatureCell(cell.refs[0]);
+
+    mostDeepSigCell.refs.push(sigCell);
+
+    return {
+      msgCell: cell.toBoc(),
+    };
   }
 
   private signatureCell(msgToSign: Cell) {

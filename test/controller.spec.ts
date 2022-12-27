@@ -17,6 +17,10 @@ function randomAddress(seed: string, workchain: number = 0) {
   }
   return new Address(workchain, hash);
 }
+
+const verificationDate = Math.floor(new Date().getTime() / 1000) + 60 * 10;
+const emptyCellHash = new Cell().hash().toString("base64");
+
 class StubCodeStorageProvider implements CodeStorageProvider {
   storage: Map<string, string> = new Map();
 
@@ -29,7 +33,16 @@ class StubCodeStorageProvider implements CodeStorageProvider {
   }
 
   async read(pointer: string): Promise<string> {
-    return "some content";
+    return JSON.stringify({
+      sources: [],
+      compiler: "func",
+      compilerSettings: {
+        funcVersion: "0.3.0",
+      },
+      hash: emptyCellHash,
+      knownContractAddress: randomAddress("contract").toFriendly(),
+      verificationDate,
+    });
   }
 }
 
@@ -42,7 +55,7 @@ class StubSourceVerifier implements SourceVerifier {
         funcVersion: "0.3.0",
         commandLine: "some command line",
       },
-      hash: "SomeHASH",
+      hash: emptyCellHash,
       sources: [],
     };
   }
@@ -75,6 +88,7 @@ const stubSourceVerifier = new StubSourceVerifier();
 
 describe("Controller", () => {
   let controller: Controller;
+  let controller2: Controller;
   const VERIFIER_ID = "some verifier";
 
   beforeEach(() => {
@@ -96,6 +110,23 @@ describe("Controller", () => {
     );
   });
 
+  controller2 = new Controller(
+    new StubCodeStorageProvider(),
+    {
+      func: stubSourceVerifier,
+      fift: stubSourceVerifier,
+      tact: stubSourceVerifier,
+    },
+    {
+      privateKey: Buffer.from(server2Keypair.secretKey).toString("base64"),
+      allowReverification: false,
+      sourcesRegistryAddress: randomAddress("sourcesReg").toFriendly(),
+      verifierId: VERIFIER_ID,
+      verifierRegistryAddress: randomAddress("verifierReg").toFriendly(),
+    },
+    stubTonReaderClient,
+  );
+
   it("Adds source", async () => {
     const result = await controller.addSource({
       compiler: "func",
@@ -110,12 +141,12 @@ describe("Controller", () => {
       tmpDir: "N/A", // TODO
     });
 
-    expect(result.compileResult.hash).toEqual("SomeHASH");
+    expect(result.compileResult.hash).toEqual(emptyCellHash);
   });
 
   describe("Sign", () => {
     it("Signs a source", async () => {
-      const { msgCell } = await controller.addSource({
+      const { msgCell } = await controller2.addSource({
         compiler: "func",
         compilerSettings: {
           funcVersion: "0.3.0",
@@ -128,6 +159,9 @@ describe("Controller", () => {
         tmpDir: "N/A", // TODO
       });
 
+      console.log(msgCell?.toString("base64"));
+
+      // TODO figure this out
       const result = await controller.sign({ messageCell: msgCell! });
 
       /*
@@ -413,19 +447,35 @@ describe("Controller", () => {
           const kp = tweetnacl.sign.keyPair();
           const kp2 = tweetnacl.sign.keyPair();
 
+          const mock = jest.spyOn(stubTonReaderClient, "getVerifierConfig").mockResolvedValue({
+            quorum: 3,
+            verifiers: [
+              Buffer.from(serverKeypair.publicKey),
+              Buffer.from(kp.publicKey),
+              Buffer.from(kp2.publicKey),
+            ],
+          });
+
           const sigCell = makeSigCell(cellToSign, kp2);
           sigCell.refs.push(makeSigCell(new Cell(), kp));
 
           await expectSignThrow(sigCell, "Invalid signature");
+          mock.mockRestore();
         });
       });
 
       it("Already signed by own", async () => {
         const kp = tweetnacl.sign.keyPair();
+        const mock = jest.spyOn(stubTonReaderClient, "getVerifierConfig").mockResolvedValue({
+          quorum: 2,
+          verifiers: [Buffer.from(serverKeypair.publicKey), Buffer.from(kp.publicKey)],
+        });
 
-        const sigCell = makeSigCell(cellToSign, kp);
-        sigCell.refs.push(makeSigCell(cellToSign, serverKeypair));
-        await expectSignThrow(sigCell, "Invalid signature (signed by self)");
+        await expectSignThrow(
+          makeSigCell(cellToSign, serverKeypair),
+          "Invalid signature (signed by self)",
+        );
+        mock.mockRestore();
       });
 
       it("Sig does not belong to verifier id", async () => {
@@ -435,7 +485,7 @@ describe("Controller", () => {
           tweetnacl.sign.keyPair(),
         ];
 
-        const mock = jest.fn(stubTonReaderClient.getVerifierConfig).mockResolvedValue({
+        const mock = jest.spyOn(stubTonReaderClient, "getVerifierConfig").mockResolvedValue({
           quorum: 2,
           verifiers: [
             Buffer.from(kp.publicKey),
@@ -443,8 +493,6 @@ describe("Controller", () => {
             Buffer.from(kp3.publicKey),
           ],
         });
-
-        stubTonReaderClient.getVerifierConfig = mock;
 
         const sigCell = makeSigCell(cellToSign, kp);
         await expectSignThrow(sigCell, "This verifier is not in the multisig config");
@@ -454,24 +502,62 @@ describe("Controller", () => {
 
       it("Only one in quorum", async () => {
         const kp = tweetnacl.sign.keyPair();
-        const mock = jest.fn(stubTonReaderClient.getVerifierConfig).mockResolvedValue({
+        const mock = jest.spyOn(stubTonReaderClient, "getVerifierConfig").mockResolvedValue({
           quorum: 1,
           verifiers: [Buffer.from(serverKeypair.publicKey)],
         });
-
-        stubTonReaderClient.getVerifierConfig = mock;
 
         const sigCell = makeSigCell(cellToSign, kp);
         await expectSignThrow(sigCell, "Mulisig quorum must be greater than 1");
 
         mock.mockRestore();
       });
+
+      it("More signatures than need", async () => {
+        const kp = tweetnacl.sign.keyPair();
+        const kp2 = tweetnacl.sign.keyPair();
+        const mock = jest.spyOn(stubTonReaderClient, "getVerifierConfig").mockResolvedValue({
+          quorum: 2,
+          verifiers: [
+            Buffer.from(serverKeypair.publicKey),
+            Buffer.from(kp.publicKey),
+            Buffer.from(kp2.publicKey),
+          ],
+        });
+
+        const sigCell = makeSigCell(cellToSign, kp);
+        const sigCell2 = makeSigCell(cellToSign, kp2);
+        sigCell.refs.push(sigCell2);
+        await expectSignThrow(sigCell, "Too many signatures");
+
+        mock.mockRestore();
+      });
+
+      it("Signature appears more than once", async () => {
+        const kp = tweetnacl.sign.keyPair();
+        const kp2 = tweetnacl.sign.keyPair();
+        const mock = jest.spyOn(stubTonReaderClient, "getVerifierConfig").mockResolvedValue({
+          quorum: 3,
+          verifiers: [
+            Buffer.from(serverKeypair.publicKey),
+            Buffer.from(kp.publicKey),
+            Buffer.from(kp2.publicKey),
+          ],
+        });
+
+        const sigCell = makeSigCell(cellToSign, kp);
+        const sigCell2 = makeSigCell(cellToSign, kp);
+        sigCell.refs.push(sigCell2);
+        await expectSignThrow(sigCell, "Duplicate signature");
+
+        mock.mockRestore();
+      });
     });
 
-    describe.only("Invalid compilation results", () => {
+    describe("Invalid compilation results", () => {
       const cellToSign = beginCell()
         .storeBuffer(sha256(VERIFIER_ID))
-        .storeUint(Math.floor(Date.now() / 1000) + 60 * 5, 32)
+        .storeUint(verificationDate, 32)
         .storeAddress(Address.parse(zeroAddress()))
         .storeAddress(randomAddress("sourcesReg"))
         .storeRef(
@@ -493,7 +579,7 @@ describe("Controller", () => {
         .endCell();
 
       it("Different code hash", async () => {
-        const mock = jest.fn(stubSourceVerifier.verify).mockResolvedValue({
+        const mock = jest.spyOn(stubSourceVerifier, "verify").mockResolvedValue({
           result: "not_similar",
           error: null,
           compilerSettings: {
@@ -504,16 +590,30 @@ describe("Controller", () => {
           sources: [],
         });
 
-        stubSourceVerifier.verify = mock;
-
         await expect(controller.sign({ messageCell: validWrappingCell.toBoc() })).rejects.toThrow(
           "Invalid compilation result",
         );
 
         mock.mockRestore();
       });
+
       it("Does not compile", async () => {
-        throw "Not implemented";
+        const mock = jest.spyOn(stubSourceVerifier, "verify").mockResolvedValue({
+          result: "compile_error",
+          error: "some error",
+          compilerSettings: {
+            funcVersion: "0.3.0",
+            commandLine: "some command line",
+          },
+          hash: "SomeHASH",
+          sources: [],
+        });
+
+        await expect(controller.sign({ messageCell: validWrappingCell.toBoc() })).rejects.toThrow(
+          "Invalid compilation result",
+        );
+
+        mock.mockRestore();
       });
     });
   });

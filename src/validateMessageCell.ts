@@ -19,12 +19,26 @@ function validateSignatureCell(
     throw new Error("This verifier is not in the multisig config");
   }
 
+  const sigs: Record<string, boolean> = {};
+  let sigCount = 0;
+
   while (currRef) {
+    sigCount += 1;
+
+    if (sigCount >= verifierConfig.quorum) {
+      throw new Error("Too many signatures");
+    }
+
     if (currRef.remaining !== 512 + 256) {
       throw new Error("Invalid signature cell");
     }
 
     const sig = currRef.readBuffer(512 / 8);
+
+    if (sigs[sig.toString("base64")] === true) {
+      throw new Error("Duplicate signature");
+    }
+
     const pubKey = currRef.readBuffer(256 / 8);
 
     if (pubKey.equals(keypair.publicKey)) {
@@ -42,6 +56,8 @@ function validateSignatureCell(
     } else {
       currRef = null;
     }
+
+    sigs[sig.toString("base64")] = true;
   }
 }
 
@@ -91,9 +107,9 @@ function validateVerifierRegistryBodyCell(
     throw new Error("Invalid verifier id");
   }
 
-  const date = slice.readUint(32);
+  const date = slice.readUint(32).toNumber();
 
-  const dateInMessage = new Date(date.toNumber() * 1000);
+  const dateInMessage = new Date(date * 1000);
 
   if (dateInMessage < new Date()) {
     throw new Error("Message is expired");
@@ -130,7 +146,7 @@ export function validateMessageCell(
     throw new Error("Invalid operation");
   }
 
-  slice.skip(64);
+  const queryId = slice.readUint(64);
 
   const signedSlice = slice.readRef();
   const signedCell = signedSlice.toCell();
@@ -147,5 +163,6 @@ export function validateMessageCell(
     codeCellHash,
     senderAddress,
     date,
+    queryId,
   };
 }
