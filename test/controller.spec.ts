@@ -29,7 +29,7 @@ class StubCodeStorageProvider implements CodeStorageProvider {
   }
 
   async read(pointer: string): Promise<string> {
-    throw new Error("Method not implemented.");
+    return "some content";
   }
 }
 
@@ -48,14 +48,17 @@ class StubSourceVerifier implements SourceVerifier {
   }
 }
 
+const serverKeypair = tweetnacl.sign.keyPair();
+const server2Keypair = tweetnacl.sign.keyPair();
+
 class StubTonReaderClient implements TonReaderClient {
   async getVerifierConfig(
     verifierId: string,
     verifierRegistryAddress: string,
   ): Promise<VerifierConfig> {
     return {
-      quorum: 1,
-      verifiers: ["X"],
+      quorum: 2,
+      verifiers: [Buffer.from(serverKeypair.publicKey), Buffer.from(server2Keypair.publicKey)],
     };
   }
   async isProofDeployed(
@@ -67,6 +70,9 @@ class StubTonReaderClient implements TonReaderClient {
   }
 }
 
+const stubTonReaderClient = new StubTonReaderClient();
+const stubSourceVerifier = new StubSourceVerifier();
+
 describe("Controller", () => {
   let controller: Controller;
   const VERIFIER_ID = "some verifier";
@@ -75,18 +81,18 @@ describe("Controller", () => {
     controller = new Controller(
       new StubCodeStorageProvider(),
       {
-        func: new StubSourceVerifier(),
-        fift: new StubSourceVerifier(),
-        tact: new StubSourceVerifier(),
+        func: stubSourceVerifier,
+        fift: stubSourceVerifier,
+        tact: stubSourceVerifier,
       },
       {
-        privateKey: Buffer.from(tweetnacl.sign.keyPair().secretKey).toString("base64"),
+        privateKey: Buffer.from(serverKeypair.secretKey).toString("base64"),
         allowReverification: false,
         sourcesRegistryAddress: randomAddress("sourcesReg").toFriendly(),
         verifierId: VERIFIER_ID,
         verifierRegistryAddress: randomAddress("verifierReg").toFriendly(),
       },
-      new StubTonReaderClient(),
+      stubTonReaderClient,
     );
   });
 
@@ -333,30 +339,183 @@ describe("Controller", () => {
       });
     });
 
+    function makeSigCell(cellToSign: Cell, kp: tweetnacl.SignKeyPair) {
+      const sig = Buffer.from(tweetnacl.sign.detached(cellToSign.hash(), kp.secretKey));
+      return beginCell().storeBuffer(sig).storeBuffer(Buffer.from(kp.publicKey)).endCell();
+    }
+
     describe("Invalid signatures", () => {
-      it("Invalid signature", async () => {
-        throw "Not implemented";
+      const cellToSign = beginCell()
+        .storeBuffer(sha256(VERIFIER_ID))
+        .storeUint(Math.floor(Date.now() / 1000) + 60 * 5, 32)
+        .storeAddress(Address.parse(zeroAddress()))
+        .storeAddress(randomAddress("sourcesReg"))
+        .storeRef(
+          beginCell()
+            .storeUint(DEPLOY_SOURCE_OP, 32)
+            .storeUint(0, 64)
+            .storeBuffer(sha256(VERIFIER_ID))
+            .storeUint(0, 256)
+            .storeRef(beginCell().storeUint(1, 8).storeBuffer(Buffer.from("someLink")).endCell())
+            .endCell(),
+        )
+        .endCell();
+
+      const validWrappingCell = (signCell: Cell) =>
+        beginCell()
+          .storeUint(FORWARD_MESSAGE_OP, 32)
+          .storeUint(0, 64)
+          .storeRef(cellToSign)
+          .storeRef(signCell)
+          .endCell();
+
+      async function expectSignThrow(signCell: Cell, error: string) {
+        await expect(
+          controller.sign({ messageCell: validWrappingCell(signCell).toBoc() }),
+        ).rejects.toThrow(error);
+      }
+
+      describe("Invalid signature cell", () => {
+        it("Empty", async () => {
+          await expectSignThrow(new Cell(), "Invalid signature cell");
+        });
+
+        it("Non-Empty", async () => {
+          await expectSignThrow(beginCell().storeUint(0, 1).endCell(), "Invalid signature cell");
+        });
+
+        it("Invalid signing public key", async () => {
+          const kp = tweetnacl.sign.keyPair();
+          const kp2 = tweetnacl.sign.keyPair();
+          const sig = Buffer.from(tweetnacl.sign.detached(cellToSign.hash(), kp2.secretKey));
+
+          const sigCell = beginCell()
+            .storeBuffer(sig)
+            .storeBuffer(Buffer.from(kp.publicKey))
+            .endCell();
+
+          await expectSignThrow(sigCell, "Invalid signature");
+        });
+
+        it("Invalid signed cell hash", async () => {
+          const kp = tweetnacl.sign.keyPair();
+          const sig = Buffer.from(tweetnacl.sign.detached(new Cell().hash(), kp.secretKey));
+
+          const sigCell = beginCell()
+            .storeBuffer(sig)
+            .storeBuffer(Buffer.from(kp.publicKey))
+            .endCell();
+
+          await expectSignThrow(sigCell, "Invalid signature");
+        });
+
+        it("Multiple signatures, one invalid", async () => {
+          const kp = tweetnacl.sign.keyPair();
+          const kp2 = tweetnacl.sign.keyPair();
+
+          const sigCell = makeSigCell(cellToSign, kp2);
+          sigCell.refs.push(makeSigCell(new Cell(), kp));
+
+          await expectSignThrow(sigCell, "Invalid signature");
+        });
       });
-      it("Signature does not match cell", async () => {
-        throw "Not implemented";
+
+      it("Already signed by own", async () => {
+        const kp = tweetnacl.sign.keyPair();
+
+        const sigCell = makeSigCell(cellToSign, kp);
+        sigCell.refs.push(makeSigCell(cellToSign, serverKeypair));
+        await expectSignThrow(sigCell, "Invalid signature (signed by self)");
       });
-      it("My own sig", async () => {
-        throw "Not implemented";
-      });
+
       it("Sig does not belong to verifier id", async () => {
-        throw "Not implemented";
+        const [kp, kp2, kp3] = [
+          tweetnacl.sign.keyPair(),
+          tweetnacl.sign.keyPair(),
+          tweetnacl.sign.keyPair(),
+        ];
+
+        const mock = jest.fn(stubTonReaderClient.getVerifierConfig).mockResolvedValue({
+          quorum: 2,
+          verifiers: [
+            Buffer.from(kp.publicKey),
+            Buffer.from(kp2.publicKey),
+            Buffer.from(kp3.publicKey),
+          ],
+        });
+
+        stubTonReaderClient.getVerifierConfig = mock;
+
+        const sigCell = makeSigCell(cellToSign, kp);
+        await expectSignThrow(sigCell, "This verifier is not in the multisig config");
+
+        mock.mockRestore();
       });
-      it("Only one in quorum", async () => {});
+
+      it("Only one in quorum", async () => {
+        const kp = tweetnacl.sign.keyPair();
+        const mock = jest.fn(stubTonReaderClient.getVerifierConfig).mockResolvedValue({
+          quorum: 1,
+          verifiers: [Buffer.from(serverKeypair.publicKey)],
+        });
+
+        stubTonReaderClient.getVerifierConfig = mock;
+
+        const sigCell = makeSigCell(cellToSign, kp);
+        await expectSignThrow(sigCell, "Mulisig quorum must be greater than 1");
+
+        mock.mockRestore();
+      });
     });
 
-    // describe("Invalid compilation results", () => {
-    //   it("Different code hash", async () => {
-    //     throw "Not implemented";
-    //   });
-    //   it("Does not compile", async () => {
-    //     throw "Not implemented";
-    //   });
-    // });
+    describe.only("Invalid compilation results", () => {
+      const cellToSign = beginCell()
+        .storeBuffer(sha256(VERIFIER_ID))
+        .storeUint(Math.floor(Date.now() / 1000) + 60 * 5, 32)
+        .storeAddress(Address.parse(zeroAddress()))
+        .storeAddress(randomAddress("sourcesReg"))
+        .storeRef(
+          beginCell()
+            .storeUint(DEPLOY_SOURCE_OP, 32)
+            .storeUint(0, 64)
+            .storeBuffer(sha256(VERIFIER_ID))
+            .storeBuffer(new Cell().hash()) // code cell hash
+            .storeRef(beginCell().storeUint(1, 8).storeBuffer(Buffer.from("someLink")).endCell())
+            .endCell(),
+        )
+        .endCell();
+
+      const validWrappingCell = beginCell()
+        .storeUint(FORWARD_MESSAGE_OP, 32)
+        .storeUint(0, 64)
+        .storeRef(cellToSign)
+        .storeRef(makeSigCell(cellToSign, server2Keypair))
+        .endCell();
+
+      it("Different code hash", async () => {
+        const mock = jest.fn(stubSourceVerifier.verify).mockResolvedValue({
+          result: "not_similar",
+          error: null,
+          compilerSettings: {
+            funcVersion: "0.3.0",
+            commandLine: "some command line",
+          },
+          hash: "SomeHASH",
+          sources: [],
+        });
+
+        stubSourceVerifier.verify = mock;
+
+        await expect(controller.sign({ messageCell: validWrappingCell.toBoc() })).rejects.toThrow(
+          "Invalid compilation result",
+        );
+
+        mock.mockRestore();
+      });
+      it("Does not compile", async () => {
+        throw "Not implemented";
+      });
+    });
   });
 });
 

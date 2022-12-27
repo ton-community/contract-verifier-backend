@@ -3,7 +3,7 @@ import BN from "bn.js";
 import { sha256 } from "./utils";
 
 export type VerifierConfig = {
-  verifiers: string[];
+  verifiers: Buffer[];
   quorum: number;
 };
 
@@ -41,7 +41,7 @@ export class TonReaderClientImpl implements TonReaderClient {
 
     const quorum = verifierConfig.readUint(8).toNumber();
     const verifiers = Array.from(verifierConfig.readDict(256, (pkE) => null).keys()).map((k) =>
-      new BN(k).toBuffer().toString("base64"),
+      new BN(k).toBuffer(),
     );
 
     return {
