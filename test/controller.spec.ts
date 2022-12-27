@@ -1,4 +1,4 @@
-import { Controller, FORWARD_MESSAGE_OP, DEPLOY_SOURCE_OP } from "../src/controller";
+import { Controller } from "../src/controller";
 import { CodeStorageProvider, FileUploadSpec } from "../src/ipfs-code-storage-provider";
 // @ts-ignore
 import { of as ipfsHash } from "ipfs-only-hash";
@@ -8,6 +8,7 @@ import { beginCell, Cell, Address } from "ton";
 import { TonReaderClient, VerifierConfig } from "../src/ton-reader-client";
 import { sha256 } from "../src/utils";
 import Prando from "prando";
+import { FORWARD_MESSAGE_OP, DEPLOY_SOURCE_OP } from "../src/cell-builders";
 
 function randomAddress(seed: string, workchain: number = 0) {
   const random = new Prando(seed);
