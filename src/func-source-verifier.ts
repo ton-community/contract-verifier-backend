@@ -7,6 +7,7 @@ import {
   SourceVerifyPayload,
   CompileResult,
   FuncCliCompileSettings,
+  FuncSourceToVerify,
 } from "./types";
 import path from "path";
 import { funcCompilers } from "./binaries";
@@ -60,7 +61,7 @@ export class FuncSourceVerifier implements SourceVerifier {
     let funcCmd: string | null = null;
     const compilerSettings = payload.compilerSettings as FuncCliCompileSettings;
 
-    const sources = payload.sources.map((s) => ({
+    const sources = payload.sources.map((s: FuncSourceToVerify) => ({
       filename: s.path,
       hasIncludeDirectives: s.hasIncludeDirectives,
       isEntrypoint: s.isEntrypoint,

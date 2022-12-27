@@ -131,12 +131,12 @@ app.get("/hc", (req, res) => {
     },
   );
 
-  app.post("/sign", limiter, async (req, res) => {
-    const result = await controller.sign({
-      messageCell: req.body.messageCell,
-    });
-    res.json(result);
-  });
+  // app.post("/sign", limiter, async (req, res) => {
+  //   const result = await controller.sign({
+  //     messageCell: req.body.messageCell,
+  //   });
+  //   res.json(result);
+  // });
 
   app.listen(port, () => {
     console.log(`Ton Contract Verifier Server running on ${port}`);

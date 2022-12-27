@@ -7,13 +7,21 @@ import {
 } from "./types";
 import path from "path";
 import tweetnacl from "tweetnacl";
-import { VerifyResult, Compiler } from "./types";
+import {
+  VerifyResult,
+  Compiler,
+  FuncCliCompileSettings,
+  FiftCliCompileSettings,
+  TactCliCompileSettings,
+  SourceItem,
+} from "./types";
 import { Address, beginCell, Cell, TonClient } from "ton";
 import BN from "bn.js";
 import { CodeStorageProvider } from "./ipfs-code-storage-provider";
 import { sha256, random64BitNumber, getNowHourRoundedDown } from "./utils";
 import { TonReaderClient } from "./ton-reader-client";
 import { validateMessageCell } from "./validateMessageCell";
+import { SourceToVerify } from "./types";
 
 export type Base64URL = string;
 
@@ -26,7 +34,7 @@ function deploySource(
   verifierId: Buffer,
 ): Cell {
   return beginCell()
-    .storeUint(1002, 32) // Deploy source OP
+    .storeUint(DEPLOY_SOURCE_OP, 32)
     .storeUint(queryId, 64)
     .storeBuffer(verifierId)
     .storeUint(new BN(Buffer.from(codeCellHash, "base64")), 256)
@@ -62,12 +70,12 @@ interface ControllerConfig {
 }
 
 export class Controller {
-  #ipfsProvider: CodeStorageProvider;
-  #keypair: tweetnacl.SignKeyPair;
-  #VERIFIER_SHA256: Buffer;
-  config: ControllerConfig;
-  compilers: { [key in Compiler]: SourceVerifier };
-  tonReaderClient: TonReaderClient;
+  private ipfsProvider: CodeStorageProvider;
+  private keypair: tweetnacl.SignKeyPair;
+  private VERIFIER_SHA256: Buffer;
+  private config: ControllerConfig;
+  private compilers: { [key in Compiler]: SourceVerifier };
+  private tonReaderClient: TonReaderClient;
 
   constructor(
     ipfsProvider: CodeStorageProvider,
@@ -75,11 +83,11 @@ export class Controller {
     config: ControllerConfig,
     tonReaderClient: TonReaderClient,
   ) {
-    this.#VERIFIER_SHA256 = sha256(config.verifierId);
+    this.VERIFIER_SHA256 = sha256(config.verifierId);
     this.config = config;
     this.compilers = compilers;
-    this.#ipfsProvider = ipfsProvider;
-    this.#keypair = tweetnacl.sign.keyPair.fromSecretKey(
+    this.ipfsProvider = ipfsProvider;
+    this.keypair = tweetnacl.sign.keyPair.fromSecretKey(
       Buffer.from(this.config.privateKey, "base64"),
     );
     this.tonReaderClient = tonReaderClient;
@@ -121,9 +129,9 @@ export class Controller {
         name: s.filename,
       }),
     );
-    const fileLocators = await this.#ipfsProvider.write(...sourcesToUpload);
+    const fileLocators = await this.ipfsProvider.write(...sourcesToUpload);
 
-    const sourceSpec = {
+    const sourceSpec: SourceItem = {
       compilerSettings: compileResult.compilerSettings,
       compiler: verificationPayload.compiler,
       hash: compileResult.hash,
@@ -138,7 +146,7 @@ export class Controller {
     };
 
     // Upload source spec JSON to IPFS
-    const [ipfsLink] = await this.#ipfsProvider.writeFromContent(
+    const [ipfsLink] = await this.ipfsProvider.writeFromContent(
       Buffer.from(JSON.stringify(sourceSpec)),
     );
 
@@ -167,15 +175,84 @@ export class Controller {
 
   public async sign({ messageCell }: { messageCell: Buffer }) {
     const cell = Cell.fromBoc(messageCell)[0];
-    validateMessageCell(cell, this.#VERIFIER_SHA256, this.config.sourcesRegistryAddress);
+
+    const verifierConfig = await this.tonReaderClient.getVerifierConfig(
+      this.config.verifierId,
+      this.config.verifierRegistryAddress,
+    );
+
+    const { ipfsPointer, codeCellHash, senderAddress, queryId } = validateMessageCell(
+      cell,
+      this.VERIFIER_SHA256,
+      this.config.sourcesRegistryAddress,
+      this.keypair,
+      verifierConfig,
+    );
+
+    const json: SourceItem = JSON.parse(await this.ipfsProvider.read(ipfsPointer));
+
+    if (json.hash !== codeCellHash) {
+      throw new Error("Code hash mismatch");
+    }
+
+    const compiler = this.compilers[json.compiler];
+
+    // TODO this part won't work past the unit tests
+    // Need to persist sources to disk and pass the path to the compiler
+    // Or maybe just pass the content to the compiler and let it handle it
+    const sources = await Promise.all(
+      json.sources.map((s) => {
+        const content = this.ipfsProvider.read(s.url);
+
+        return {
+          ...s,
+          path: "",
+        };
+      }),
+    );
+
+    const sourceToVerify: SourceVerifyPayload = {
+      sources: sources,
+      compiler: json.compiler,
+      compilerSettings: json.compilerSettings,
+      knownContractAddress: json.knownContractAddress,
+      knownContractHash: json.hash,
+      tmpDir: "",
+      senderAddress: senderAddress.toFriendly(),
+    };
+
+    const compileResult = await compiler.verify(sourceToVerify);
+
+    if (compileResult.result !== "similar") {
+      throw new Error("Invalid compilation result");
+    }
+
+    let mostDeepSigCell = cell.refs[1];
+
+    while (true) {
+      if (mostDeepSigCell.refs.length === 0) {
+        break;
+      } else if (mostDeepSigCell.refs.length > 1) {
+        throw new Error("Invalid signature cell");
+      }
+      mostDeepSigCell = mostDeepSigCell.refs[0];
+    }
+
+    const { sigCell } = this.signatureCell(cell.refs[0]);
+
+    mostDeepSigCell.refs.push(sigCell);
+
+    return {
+      msgCell: cell.toBoc(),
+    };
   }
 
   private signatureCell(msgToSign: Cell) {
-    const sig = Buffer.from(tweetnacl.sign.detached(msgToSign.hash(), this.#keypair.secretKey));
+    const sig = Buffer.from(tweetnacl.sign.detached(msgToSign.hash(), this.keypair.secretKey));
 
     const sigCell = beginCell()
       .storeBuffer(sig)
-      .storeBuffer(Buffer.from(this.#keypair.publicKey))
+      .storeBuffer(Buffer.from(this.keypair.publicKey))
       .endCell();
     return { sig, sigCell };
   }
@@ -188,11 +265,11 @@ export class Controller {
     sourcesRegistry: string,
   ) {
     return beginCell()
-      .storeBuffer(this.#VERIFIER_SHA256)
+      .storeBuffer(this.VERIFIER_SHA256)
       .storeUint(Math.floor(Date.now() / 1000) + 60 * 10, 32) // Valid until 10 minutes from now
       .storeAddress(Address.parse(senderAddress))
       .storeAddress(Address.parse(sourcesRegistry))
-      .storeRef(deploySource(queryId, codeCellHash, ipfsLink, this.#VERIFIER_SHA256))
+      .storeRef(deploySource(queryId, codeCellHash, ipfsLink, this.VERIFIER_SHA256))
       .endCell();
   }
 }

@@ -56,7 +56,9 @@ type Path = string;
 
 export type SourceToVerify = {
   path: Path;
+};
 
+export type FuncSourceToVerify = SourceToVerify & {
   // TODO - these will be removed and done exclusively on the backend
   includeInCommand: boolean;
   isEntrypoint: boolean;
@@ -66,7 +68,7 @@ export type SourceToVerify = {
 
 export type CompileOptions = {
   compiler: Compiler;
-  compilerSettings: FuncCliCompileSettings;
+  compilerSettings: FuncCliCompileSettings | FiftCliCompileSettings | TactCliCompileSettings;
 };
 
 export type SourceVerifyPayload = CompileOptions & {
@@ -75,4 +77,15 @@ export type SourceVerifyPayload = CompileOptions & {
   knownContractHash: string;
   tmpDir: string;
   senderAddress: string;
+};
+
+export type SourceItem = {
+  compilerSettings: FuncCliCompileSettings | FiftCliCompileSettings | TactCliCompileSettings;
+  compiler: Compiler;
+  hash: string;
+  verificationDate: number;
+  sources: ({
+    url: string;
+  } & (FuncSourceCompileResult | TactSourceCompileResult | FiftSourceCompileResult))[];
+  knownContractAddress: string;
 };
