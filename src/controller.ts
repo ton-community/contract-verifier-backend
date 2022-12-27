@@ -195,8 +195,6 @@ export class Controller {
     while (true) {
       if (mostDeepSigCell.refs.length === 0) {
         break;
-      } else if (mostDeepSigCell.refs.length > 1) {
-        throw new Error("Invalid signature cell");
       }
       mostDeepSigCell = mostDeepSigCell.refs[0];
     }

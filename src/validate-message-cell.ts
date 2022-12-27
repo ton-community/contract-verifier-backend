@@ -51,10 +51,12 @@ function validateSignatureCell(
       throw new Error("Invalid signature");
     }
 
-    if (currRef.remainingRefs > 0) {
+    if (currRef.remainingRefs === 1) {
       currRef = currRef.readRef();
-    } else {
+    } else if (currRef.remainingRefs === 0) {
       currRef = null;
+    } else {
+      throw new Error("Invalid signature cell");
     }
 
     sigs[sig.toString("base64")] = true;

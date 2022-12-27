@@ -462,6 +462,27 @@ describe("Controller", () => {
           await expectSignThrow(sigCell, "Invalid signature");
           mock.mockRestore();
         });
+
+        it("Sig cell contains more than one ref", async () => {
+          const kp = tweetnacl.sign.keyPair();
+          const kp2 = tweetnacl.sign.keyPair();
+
+          const mock = jest.spyOn(stubTonReaderClient, "getVerifierConfig").mockResolvedValue({
+            quorum: 3,
+            verifiers: [
+              Buffer.from(serverKeypair.publicKey),
+              Buffer.from(kp.publicKey),
+              Buffer.from(kp2.publicKey),
+            ],
+          });
+
+          const sigCell = makeSigCell(cellToSign, kp2);
+          sigCell.refs.push(makeSigCell(cellToSign, kp));
+          sigCell.refs.push(makeSigCell(cellToSign, kp));
+
+          await expectSignThrow(sigCell, "Invalid signature cell");
+          mock.mockRestore();
+        });
       });
 
       it("Already signed by own", async () => {
