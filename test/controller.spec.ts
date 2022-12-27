@@ -162,9 +162,15 @@ describe("Controller", () => {
         tmpDir: "N/A", // TODO
       });
 
-      console.log(msgCell?.toString("base64"));
-
       const result = await controller.sign({ messageCell: msgCell! });
+
+      const updatedMsgCell = Cell.fromBoc(result.msgCell)[0];
+      const sigCell = updatedMsgCell.refs[1];
+      const controllerSigCell = sigCell.refs[0].beginParse();
+      controllerSigCell.skip(512);
+      const pubKey = controllerSigCell.readBuffer(32);
+      expect(pubKey).toEqual(Buffer.from(serverKeypair.publicKey));
+      expect(updatedMsgCell.refs[0].hash()).toEqual(Cell.fromBoc(msgCell!)[0].refs[0].hash());
     });
 
     describe("Invalid wrapper cell", () => {
