@@ -181,7 +181,7 @@ export class Controller {
       this.config.verifierRegistryAddress,
     );
 
-    const { ipfsPointer, codeCellHash, senderAddress, date, queryId } = validateMessageCell(
+    const { ipfsPointer, codeCellHash, senderAddress, queryId } = validateMessageCell(
       cell,
       this.VERIFIER_SHA256,
       this.config.sourcesRegistryAddress,
@@ -190,10 +190,6 @@ export class Controller {
     );
 
     const json: SourceItem = JSON.parse(await this.ipfsProvider.read(ipfsPointer));
-
-    if (json.verificationDate !== date) {
-      throw new Error("Verification date mismatch");
-    }
 
     if (json.hash !== codeCellHash) {
       throw new Error("Code hash mismatch");

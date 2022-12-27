@@ -29,20 +29,20 @@ class StubCodeStorageProvider implements CodeStorageProvider {
   }
 
   async writeFromContent(...files: Buffer[]): Promise<string[]> {
-    return Promise.all(files.map((file) => ipfsHash(file)));
+    const hashes = await Promise.all(files.map((file) => ipfsHash(file)));
+    files.forEach((file, i) => {
+      this.storage.set(hashes[i], file.toString("utf8"));
+    });
+
+    return hashes;
   }
 
   async read(pointer: string): Promise<string> {
-    return JSON.stringify({
-      sources: [],
-      compiler: "func",
-      compilerSettings: {
-        funcVersion: "0.3.0",
-      },
-      hash: emptyCellHash,
-      knownContractAddress: randomAddress("contract").toFriendly(),
-      verificationDate,
-    });
+    return this.storage.get(pointer)!;
+  }
+
+  clear() {
+    this.storage.clear();
   }
 }
 
@@ -85,6 +85,7 @@ class StubTonReaderClient implements TonReaderClient {
 
 const stubTonReaderClient = new StubTonReaderClient();
 const stubSourceVerifier = new StubSourceVerifier();
+const stubCodeStorageProvider = new StubCodeStorageProvider();
 
 describe("Controller", () => {
   let controller: Controller;
@@ -93,7 +94,7 @@ describe("Controller", () => {
 
   beforeEach(() => {
     controller = new Controller(
-      new StubCodeStorageProvider(),
+      stubCodeStorageProvider,
       {
         func: stubSourceVerifier,
         fift: stubSourceVerifier,
@@ -108,24 +109,26 @@ describe("Controller", () => {
       },
       stubTonReaderClient,
     );
-  });
 
-  controller2 = new Controller(
-    new StubCodeStorageProvider(),
-    {
-      func: stubSourceVerifier,
-      fift: stubSourceVerifier,
-      tact: stubSourceVerifier,
-    },
-    {
-      privateKey: Buffer.from(server2Keypair.secretKey).toString("base64"),
-      allowReverification: false,
-      sourcesRegistryAddress: randomAddress("sourcesReg").toFriendly(),
-      verifierId: VERIFIER_ID,
-      verifierRegistryAddress: randomAddress("verifierReg").toFriendly(),
-    },
-    stubTonReaderClient,
-  );
+    controller2 = new Controller(
+      stubCodeStorageProvider,
+      {
+        func: stubSourceVerifier,
+        fift: stubSourceVerifier,
+        tact: stubSourceVerifier,
+      },
+      {
+        privateKey: Buffer.from(server2Keypair.secretKey).toString("base64"),
+        allowReverification: false,
+        sourcesRegistryAddress: randomAddress("sourcesReg").toFriendly(),
+        verifierId: VERIFIER_ID,
+        verifierRegistryAddress: randomAddress("verifierReg").toFriendly(),
+      },
+      stubTonReaderClient,
+    );
+
+    stubCodeStorageProvider.clear();
+  });
 
   it("Adds source", async () => {
     const result = await controller.addSource({
@@ -161,17 +164,7 @@ describe("Controller", () => {
 
       console.log(msgCell?.toString("base64"));
 
-      // TODO figure this out
       const result = await controller.sign({ messageCell: msgCell! });
-
-      /*
-        Criteria for sigining:
-        - message cell is a valid cell and in the correct format
-        - signature in message cell has not expired
-        - signature in message cell belongs to a key from this verifier's config
-        - message cell is not already signed by this verifier
-        - sources do not result in the code hash
-        */
     });
 
     describe("Invalid wrapper cell", () => {
@@ -586,9 +579,14 @@ describe("Controller", () => {
             funcVersion: "0.3.0",
             commandLine: "some command line",
           },
-          hash: "SomeHASH",
+          hash: emptyCellHash,
           sources: [],
         });
+
+        stubCodeStorageProvider.storage.set(
+          "someLink",
+          JSON.stringify({ hash: emptyCellHash, sources: [], compiler: "func" }),
+        );
 
         await expect(controller.sign({ messageCell: validWrappingCell.toBoc() })).rejects.toThrow(
           "Invalid compilation result",
@@ -605,9 +603,14 @@ describe("Controller", () => {
             funcVersion: "0.3.0",
             commandLine: "some command line",
           },
-          hash: "SomeHASH",
+          hash: emptyCellHash,
           sources: [],
         });
+
+        stubCodeStorageProvider.storage.set(
+          "someLink",
+          JSON.stringify({ hash: emptyCellHash, sources: [], compiler: "func" }),
+        );
 
         await expect(controller.sign({ messageCell: validWrappingCell.toBoc() })).rejects.toThrow(
           "Invalid compilation result",
