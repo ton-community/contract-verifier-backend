@@ -1,6 +1,6 @@
 import { Cell, Slice } from "ton";
-import { FORWARD_MESSAGE_OP, DEPLOY_SOURCE_OP } from "./controller";
 import tweetnacl from "tweetnacl";
+import { DEPLOY_SOURCE_OP, FORWARD_MESSAGE_OP } from "./cell-builders";
 import { VerifierConfig } from "./ton-reader-client";
 
 function validateSignatureCell(
@@ -51,10 +51,12 @@ function validateSignatureCell(
       throw new Error("Invalid signature");
     }
 
-    if (currRef.remainingRefs > 0) {
+    if (currRef.remainingRefs === 1) {
       currRef = currRef.readRef();
-    } else {
+    } else if (currRef.remainingRefs === 0) {
       currRef = null;
+    } else {
+      throw new Error("Invalid signature cell");
     }
 
     sigs[sig.toString("base64")] = true;

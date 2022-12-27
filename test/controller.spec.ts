@@ -1,4 +1,4 @@
-import { Controller, FORWARD_MESSAGE_OP, DEPLOY_SOURCE_OP } from "../src/controller";
+import { Controller } from "../src/controller";
 import { CodeStorageProvider, FileUploadSpec } from "../src/ipfs-code-storage-provider";
 // @ts-ignore
 import { of as ipfsHash } from "ipfs-only-hash";
@@ -8,6 +8,7 @@ import { beginCell, Cell, Address } from "ton";
 import { TonReaderClient, VerifierConfig } from "../src/ton-reader-client";
 import { sha256 } from "../src/utils";
 import Prando from "prando";
+import { FORWARD_MESSAGE_OP, DEPLOY_SOURCE_OP } from "../src/cell-builders";
 
 function randomAddress(seed: string, workchain: number = 0) {
   const random = new Prando(seed);
@@ -459,6 +460,27 @@ describe("Controller", () => {
           sigCell.refs.push(makeSigCell(new Cell(), kp));
 
           await expectSignThrow(sigCell, "Invalid signature");
+          mock.mockRestore();
+        });
+
+        it("Sig cell contains more than one ref", async () => {
+          const kp = tweetnacl.sign.keyPair();
+          const kp2 = tweetnacl.sign.keyPair();
+
+          const mock = jest.spyOn(stubTonReaderClient, "getVerifierConfig").mockResolvedValue({
+            quorum: 3,
+            verifiers: [
+              Buffer.from(serverKeypair.publicKey),
+              Buffer.from(kp.publicKey),
+              Buffer.from(kp2.publicKey),
+            ],
+          });
+
+          const sigCell = makeSigCell(cellToSign, kp2);
+          sigCell.refs.push(makeSigCell(cellToSign, kp));
+          sigCell.refs.push(makeSigCell(cellToSign, kp));
+
+          await expectSignThrow(sigCell, "Invalid signature cell");
           mock.mockRestore();
         });
       });

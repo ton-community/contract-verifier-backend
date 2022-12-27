@@ -8,9 +8,9 @@ import {
   CompileResult,
   FuncCliCompileSettings,
   FuncSourceToVerify,
-} from "./types";
+} from "../types";
 import path from "path";
-import { funcCompilers } from "./binaries";
+import { funcCompilers } from "../binaries";
 import { fiftToCodeCell } from "./fift-source-verifier";
 
 function prepareFuncCommand(

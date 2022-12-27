@@ -2,10 +2,10 @@ import { promisify } from "util";
 import { exec } from "child_process";
 const execAsync = promisify(exec);
 import { readFile, writeFile } from "fs/promises";
-import { CompileResult, FuncCompilerVersion, SourceVerifier, SourceVerifyPayload } from "./types";
+import { CompileResult, FuncCompilerVersion, SourceVerifier, SourceVerifyPayload } from "../types";
 import path from "path";
 import { Cell } from "ton";
-import { funcCompilers } from "./binaries";
+import { funcCompilers } from "../binaries";
 
 export async function fiftToCodeCell(
   funcVersion: FuncCompilerVersion,

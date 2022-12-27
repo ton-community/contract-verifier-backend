@@ -1,9 +1,9 @@
-import { CompileResult, SourceVerifier, SourceVerifyPayload } from "./types";
 import fs from "fs/promises";
 import path from "path";
 import { promisify } from "util";
 import { exec } from "child_process";
 import { Cell } from "ton";
+import { SourceVerifier, SourceVerifyPayload, CompileResult } from "../types";
 const execAsync = promisify(exec);
 
 export class TactSourceVerifier implements SourceVerifier {
