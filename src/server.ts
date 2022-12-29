@@ -40,6 +40,12 @@ const limiter = rateLimit({
 const TMP_DIR = "./tmp";
 rmSync(TMP_DIR, { recursive: true, force: true });
 
+app.use(async (req, res, next) => {
+  const _path = path.join(TMP_DIR, req.id);
+  await mkdirp(_path);
+  next();
+});
+
 const upload = multer({
   storage: multer.diskStorage({
     destination: async (req, file, callback) => {
@@ -92,8 +98,8 @@ app.get("/hc", (req, res) => {
       verifierId: process.env.VERIFIER_ID!,
       allowReverification: !!process.env.ALLOW_REVERIFICATION,
       privateKey: process.env.PRIVATE_KEY!,
-      sourcesRegistryAddress: process.env.SOURCES_REGISTRY_ADDRESS!,
-      verifierRegistryAddress: process.env.VERIFIER_REGISTRY_ADDRESS!,
+      sourcesRegistryAddress: process.env.SOURCES_REGISTRY!,
+      verifierRegistryAddress: process.env.VERIFIER_REGISTRY!,
     },
     new TonReaderClientImpl(tc),
   );
@@ -133,7 +139,7 @@ app.get("/hc", (req, res) => {
 
   app.post("/sign", limiter, async (req, res) => {
     const result = await controller.sign({
-      messageCell: req.body.messageCell,
+      messageCell: req.body.messageCell.data,
       tmpDir: path.join(TMP_DIR, req.id),
     });
     res.json(result);

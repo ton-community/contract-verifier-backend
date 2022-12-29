@@ -138,7 +138,7 @@ export class Controller {
   }
 
   public async sign({ messageCell, tmpDir }: { messageCell: Buffer; tmpDir: string }) {
-    const cell = Cell.fromBoc(messageCell)[0];
+    const cell = Cell.fromBoc(Buffer.from(messageCell))[0];
 
     const verifierConfig = await this.tonReaderClient.getVerifierConfig(
       this.config.verifierId,
@@ -153,7 +153,9 @@ export class Controller {
       verifierConfig,
     );
 
-    const json: SourceItem = JSON.parse(await this.ipfsProvider.read(ipfsPointer));
+    const sourceTemp = await this.ipfsProvider.read(ipfsPointer);
+
+    const json: SourceItem = JSON.parse(sourceTemp);
 
     if (json.hash !== codeCellHash) {
       throw new Error("Code hash mismatch");
@@ -173,7 +175,7 @@ export class Controller {
 
         return {
           ...s,
-          path: "",
+          path: s.filename,
         };
       }),
     );
@@ -181,14 +183,19 @@ export class Controller {
     const sourceToVerify: SourceVerifyPayload = {
       sources: sources,
       compiler: json.compiler,
-      compilerSettings: json.compilerSettings,
+      compilerSettings: {
+        ...json.compilerSettings,
+        commandLine: "-SPA " + sources.map((s) => s.path).join(" "), // TODO include in command + custom command line
+      },
       knownContractAddress: json.knownContractAddress,
       knownContractHash: json.hash,
-      tmpDir: "",
+      tmpDir: tmpDir,
       senderAddress: senderAddress.toFriendly(),
     };
 
     const compileResult = await compiler.verify(sourceToVerify);
+
+    console.log(compileResult);
 
     if (compileResult.result !== "similar") {
       throw new Error("Invalid compilation result");

@@ -43,6 +43,8 @@ async function compileFuncToCodeHash(
   const executable = path.join(process.cwd(), funcCompilers[funcVersion], "func");
   const funcCmd = prepareFuncCommand(executable, funcArgs, fiftOutFile, commandLine);
 
+  console.log("Shahar2", funcCmd);
+
   const { stderr } = await execAsync(funcCmd, { cwd: tmpDir });
   if (stderr) {
     throw new Error(stderr);
