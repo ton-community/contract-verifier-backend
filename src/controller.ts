@@ -185,7 +185,8 @@ export class Controller {
       compiler: json.compiler,
       compilerSettings: {
         ...json.compilerSettings,
-        commandLine: "-SPA " + sources.map((s) => s.path).join(" "), // TODO include in command + custom command line
+        // @ts-ignore
+        commandLine: json.commandLine?.replace(/^func/, ""), // TODO this is a hack because only func
       },
       knownContractAddress: json.knownContractAddress,
       knownContractHash: json.hash,
