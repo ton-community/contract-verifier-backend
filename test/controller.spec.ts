@@ -163,7 +163,7 @@ describe("Controller", () => {
         tmpDir: "N/A", // TODO
       });
 
-      const result = await controller.sign({ messageCell: msgCell! });
+      const result = await controller.sign({ messageCell: msgCell!, tmpDir: "" });
 
       const updatedMsgCell = Cell.fromBoc(result.msgCell)[0];
       const sigCell = updatedMsgCell.refs[1];
@@ -206,7 +206,7 @@ describe("Controller", () => {
       }).map(([name, config]) => {
         const { error, cell } = config;
         it(`Rejects: ${name}`, async () => {
-          await expect(controller.sign({ messageCell: cell })).rejects.toThrow(error);
+          await expect(controller.sign({ messageCell: cell, tmpDir: "" })).rejects.toThrow(error);
         });
       });
     });
@@ -303,7 +303,7 @@ describe("Controller", () => {
       }).map(([name, config]) => {
         const { error, cell } = config;
         it(`Rejects: ${name}`, async () => {
-          await expect(controller.sign({ messageCell: cell })).rejects.toThrow(error);
+          await expect(controller.sign({ messageCell: cell, tmpDir: "" })).rejects.toThrow(error);
         });
       });
     });
@@ -368,7 +368,7 @@ describe("Controller", () => {
       }).map(([name, config]) => {
         const { error, cell } = config;
         it(`Rejects: ${name}`, async () => {
-          await expect(controller.sign({ messageCell: cell })).rejects.toThrow(error);
+          await expect(controller.sign({ messageCell: cell, tmpDir: "" })).rejects.toThrow(error);
         });
       });
     });
@@ -405,7 +405,7 @@ describe("Controller", () => {
 
       async function expectSignThrow(signCell: Cell, error: string) {
         await expect(
-          controller.sign({ messageCell: validWrappingCell(signCell).toBoc() }),
+          controller.sign({ messageCell: validWrappingCell(signCell).toBoc(), tmpDir: "" }),
         ).rejects.toThrow(error);
       }
 
@@ -616,9 +616,9 @@ describe("Controller", () => {
           JSON.stringify({ hash: emptyCellHash, sources: [], compiler: "func" }),
         );
 
-        await expect(controller.sign({ messageCell: validWrappingCell.toBoc() })).rejects.toThrow(
-          "Invalid compilation result",
-        );
+        await expect(
+          controller.sign({ messageCell: validWrappingCell.toBoc(), tmpDir: "" }),
+        ).rejects.toThrow("Invalid compilation result");
 
         mock.mockRestore();
       });
@@ -640,9 +640,9 @@ describe("Controller", () => {
           JSON.stringify({ hash: emptyCellHash, sources: [], compiler: "func" }),
         );
 
-        await expect(controller.sign({ messageCell: validWrappingCell.toBoc() })).rejects.toThrow(
-          "Invalid compilation result",
-        );
+        await expect(
+          controller.sign({ messageCell: validWrappingCell.toBoc(), tmpDir: "" }),
+        ).rejects.toThrow("Invalid compilation result");
 
         mock.mockRestore();
       });
