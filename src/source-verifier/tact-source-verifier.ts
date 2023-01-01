@@ -30,7 +30,7 @@ export class TactSourceVerifier implements SourceVerifier {
 
     if (!bocFilename || !abiFilename) {
       return {
-        compilerSettings: { tactVersion: "0.4.0" },
+        compilerSettings: { tactVersion: "0.5.0" },
         error: res.stderr,
         hash: null,
         result: "unknown_error",
@@ -43,7 +43,7 @@ export class TactSourceVerifier implements SourceVerifier {
 
     return {
       compilerSettings: {
-        tactVersion: "0.4.0",
+        tactVersion: "0.5.0",
       },
       error: null,
       hash,

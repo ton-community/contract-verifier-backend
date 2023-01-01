@@ -14,6 +14,7 @@ import { CodeStorageProvider } from "./ipfs-code-storage-provider";
 import { sha256, random64BitNumber, getNowHourRoundedDown } from "./utils";
 import { TonReaderClient } from "./ton-reader-client";
 import { validateMessageCell } from "./validate-message-cell";
+import { writeFile } from "fs/promises";
 import {
   cellToSign,
   deploySource,
@@ -136,8 +137,8 @@ export class Controller {
     };
   }
 
-  public async sign({ messageCell }: { messageCell: Buffer }) {
-    const cell = Cell.fromBoc(messageCell)[0];
+  public async sign({ messageCell, tmpDir }: { messageCell: Buffer; tmpDir: string }) {
+    const cell = Cell.fromBoc(Buffer.from(messageCell))[0];
 
     const verifierConfig = await this.tonReaderClient.getVerifierConfig(
       this.config.verifierId,
@@ -152,7 +153,9 @@ export class Controller {
       verifierConfig,
     );
 
-    const json: SourceItem = JSON.parse(await this.ipfsProvider.read(ipfsPointer));
+    const sourceTemp = await this.ipfsProvider.read(ipfsPointer);
+
+    const json: SourceItem = JSON.parse(sourceTemp);
 
     if (json.hash !== codeCellHash) {
       throw new Error("Code hash mismatch");
@@ -160,16 +163,16 @@ export class Controller {
 
     const compiler = this.compilers[json.compiler];
 
-    // TODO this part won't work past the unit tests
-    // Need to persist sources to disk and pass the path to the compiler
-    // Or maybe just pass the content to the compiler and let it handle it
     const sources = await Promise.all(
-      json.sources.map((s) => {
-        const content = this.ipfsProvider.read(s.url);
+      json.sources.map(async (s) => {
+        const content = await this.ipfsProvider.read(s.url);
+        const filePath = path.join(tmpDir, s.filename);
+
+        await writeFile(filePath, content);
 
         return {
           ...s,
-          path: "",
+          path: s.filename,
         };
       }),
     );
@@ -177,14 +180,21 @@ export class Controller {
     const sourceToVerify: SourceVerifyPayload = {
       sources: sources,
       compiler: json.compiler,
-      compilerSettings: json.compilerSettings,
+      compilerSettings: {
+        ...json.compilerSettings,
+        // TODO this is a hack because only func has a command line arg for now.
+        // @ts-ignore
+        commandLine: json.compilerSettings?.commandLine?.replace(/^func/, ""),
+      },
       knownContractAddress: json.knownContractAddress,
       knownContractHash: json.hash,
-      tmpDir: "",
+      tmpDir: tmpDir,
       senderAddress: senderAddress.toFriendly(),
     };
 
     const compileResult = await compiler.verify(sourceToVerify);
+
+    console.log(compileResult);
 
     if (compileResult.result !== "similar") {
       throw new Error("Invalid compilation result");

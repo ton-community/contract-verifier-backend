@@ -18,8 +18,6 @@ import { checkPrerequisites } from "./check-prerequisites";
 import { FiftSourceVerifier } from "./source-verifier/fift-source-verifier";
 import { FuncSourceVerifier } from "./source-verifier/func-source-verifier";
 import { TactSourceVerifier } from "./source-verifier/tact-source-verifier";
-import { getHttpEndpoint } from "@orbs-network/ton-gateway";
-import { TonClient } from "ton";
 import { TonReaderClientImpl } from "./ton-reader-client";
 
 const app = express();
@@ -39,6 +37,12 @@ const limiter = rateLimit({
 // Set up file handling
 const TMP_DIR = "./tmp";
 rmSync(TMP_DIR, { recursive: true, force: true });
+
+app.use(async (req, res, next) => {
+  const _path = path.join(TMP_DIR, req.id);
+  await mkdirp(_path);
+  next();
+});
 
 const upload = multer({
   storage: multer.diskStorage({
@@ -78,9 +82,6 @@ app.get("/hc", (req, res) => {
 });
 
 (async () => {
-  const endpoint = await getHttpEndpoint();
-  const tc = new TonClient({ endpoint });
-
   const controller = new Controller(
     new IpfsCodeStorageProvider(),
     {
@@ -92,10 +93,10 @@ app.get("/hc", (req, res) => {
       verifierId: process.env.VERIFIER_ID!,
       allowReverification: !!process.env.ALLOW_REVERIFICATION,
       privateKey: process.env.PRIVATE_KEY!,
-      sourcesRegistryAddress: process.env.SOURCES_REGISTRY_ADDRESS!,
-      verifierRegistryAddress: process.env.VERIFIER_REGISTRY_ADDRESS!,
+      sourcesRegistryAddress: process.env.SOURCES_REGISTRY!,
+      verifierRegistryAddress: process.env.VERIFIER_REGISTRY!,
     },
-    new TonReaderClientImpl(tc),
+    new TonReaderClientImpl(),
   );
 
   app.post(
@@ -131,14 +132,23 @@ app.get("/hc", (req, res) => {
     },
   );
 
-  // app.post("/sign", limiter, async (req, res) => {
-  //   const result = await controller.sign({
-  //     messageCell: req.body.messageCell,
-  //   });
-  //   res.json(result);
-  // });
+  app.post("/sign", limiter, async (req, res) => {
+    const result = await controller.sign({
+      messageCell: req.body.messageCell.data,
+      tmpDir: path.join(TMP_DIR, req.id),
+    });
+    res.json(result);
+  });
+
+  app.use(function (err: any, req: any, res: any, next: any) {
+    console.error(err.message); // Log error message in our server's console
+    if (!err.statusCode) err.statusCode = 500; // If err has no specified error code, set error code to 'Internal Server Error (500)'
+    res.status(err.statusCode).send(err); // All HTTP requests must have a response, so let's send back an error with its status
+  });
 
   app.listen(port, () => {
-    console.log(`Ton Contract Verifier Server running on ${port}`);
+    console.log(
+      `Ton Contract Verifier Server running on ${port}. Verifier Id: ${process.env.VERIFIER_ID}`,
+    );
   });
 })();

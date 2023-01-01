@@ -48,6 +48,8 @@ export class IpfsCodeStorageProvider implements CodeStorageProvider {
   }
 
   async read(pointer: string): Promise<string> {
-    return (await fetch(`https://tonsource.infura-ipfs.io/ipfs/${pointer}`)).text();
+    return (
+      await fetch(`https://tonsource.infura-ipfs.io/ipfs/${pointer.replace("ipfs://", "")}`)
+    ).text();
   }
 }
