@@ -85,6 +85,7 @@ app.get("/hc", (req, res) => {
 
 (async () => {
   const endpoint = await getHttpEndpoint();
+  console.log("Using endpoint:" + endpoint);
   const tc = new TonClient({ endpoint });
 
   const controller = new Controller(
