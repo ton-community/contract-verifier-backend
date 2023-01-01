@@ -163,9 +163,6 @@ export class Controller {
 
     const compiler = this.compilers[json.compiler];
 
-    // TODO this part won't work past the unit tests
-    // Need to persist sources to disk and pass the path to the compiler
-    // Or maybe just pass the content to the compiler and let it handle it
     const sources = await Promise.all(
       json.sources.map(async (s) => {
         const content = await this.ipfsProvider.read(s.url);
@@ -185,8 +182,9 @@ export class Controller {
       compiler: json.compiler,
       compilerSettings: {
         ...json.compilerSettings,
+        // TODO this is a hack because only func has a command line arg for now.
         // @ts-ignore
-        commandLine: json.compilerSettings?.commandLine?.replace(/^func/, ""), // TODO this is a hack because only func
+        commandLine: json.compilerSettings?.commandLine?.replace(/^func/, ""),
       },
       knownContractAddress: json.knownContractAddress,
       knownContractHash: json.hash,

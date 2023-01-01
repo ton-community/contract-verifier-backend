@@ -17,6 +17,7 @@ for heroku_app in "${values[@]}"; do
       priv_key=${!priv_key_var}
       heroku config:set --remote $heroku_app PRIVATE_KEY=$priv_key INFURA_ID=$INFURA_ID INFURA_SECRET=$INFURA_SECRET NPM_CONFIG_PRODUCTION=$NPM_CONFIG_PRODUCTION TS_NODE_PROJECT=$TS_NODE_PROJECT YARN_PRODUCTION=$YARN_PRODUCTION
       heroku config:set --remote $heroku_app VERIFIER_ID=orbs-test
+      heroku config:set --remote $heroku_app ALLOW_FIFT=1
       heroku buildpacks:clear --remote $heroku_app 
       heroku buildpacks:add --remote $heroku_app https://github.com/ton-defi-org/heroku-buildpack-func-compiler.git
       heroku buildpacks:add --remote $heroku_app heroku/nodejs
