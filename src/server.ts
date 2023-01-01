@@ -146,6 +146,8 @@ app.get("/hc", (req, res) => {
   });
 
   app.listen(port, () => {
-    console.log(`Ton Contract Verifier Server running on ${port}`);
+    console.log(
+      `Ton Contract Verifier Server running on ${port}. Verifier Id: ${process.env.VERIFIER_ID}`,
+    );
   });
 })();
