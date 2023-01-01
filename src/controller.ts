@@ -186,7 +186,7 @@ export class Controller {
       compilerSettings: {
         ...json.compilerSettings,
         // @ts-ignore
-        commandLine: json.commandLine?.replace(/^func/, ""), // TODO this is a hack because only func
+        commandLine: json.compilerSettings?.commandLine?.replace(/^func/, ""), // TODO this is a hack because only func
       },
       knownContractAddress: json.knownContractAddress,
       knownContractHash: json.hash,
