@@ -21,6 +21,7 @@ import {
   signatureCell,
   verifierRegistryForwardMessage,
 } from "./cell-builders";
+import mkdirp from "mkdirp";
 
 export type Base64URL = string;
 
@@ -168,6 +169,7 @@ export class Controller {
         const content = await this.ipfsProvider.read(s.url);
         const filePath = path.join(tmpDir, s.filename);
 
+        await mkdirp(filePath.substring(0, filePath.lastIndexOf("/")));
         await writeFile(filePath, content);
 
         return {
