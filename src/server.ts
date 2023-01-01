@@ -18,8 +18,6 @@ import { checkPrerequisites } from "./check-prerequisites";
 import { FiftSourceVerifier } from "./source-verifier/fift-source-verifier";
 import { FuncSourceVerifier } from "./source-verifier/func-source-verifier";
 import { TactSourceVerifier } from "./source-verifier/tact-source-verifier";
-import { getHttpEndpoint } from "@orbs-network/ton-gateway";
-import { TonClient } from "ton";
 import { TonReaderClientImpl } from "./ton-reader-client";
 
 const app = express();
@@ -84,10 +82,6 @@ app.get("/hc", (req, res) => {
 });
 
 (async () => {
-  const endpoint = await getHttpEndpoint();
-  console.log("Using endpoint:" + endpoint);
-  const tc = new TonClient({ endpoint });
-
   const controller = new Controller(
     new IpfsCodeStorageProvider(),
     {
@@ -102,7 +96,7 @@ app.get("/hc", (req, res) => {
       sourcesRegistryAddress: process.env.SOURCES_REGISTRY!,
       verifierRegistryAddress: process.env.VERIFIER_REGISTRY!,
     },
-    new TonReaderClientImpl(tc),
+    new TonReaderClientImpl(),
   );
 
   app.post(
@@ -144,6 +138,12 @@ app.get("/hc", (req, res) => {
       tmpDir: path.join(TMP_DIR, req.id),
     });
     res.json(result);
+  });
+
+  app.use(function (err: any, req: any, res: any, next: any) {
+    console.error(err.message); // Log error message in our server's console
+    if (!err.statusCode) err.statusCode = 500; // If err has no specified error code, set error code to 'Internal Server Error (500)'
+    res.status(err.statusCode).send(err); // All HTTP requests must have a response, so let's send back an error with its status
   });
 
   app.listen(port, () => {
