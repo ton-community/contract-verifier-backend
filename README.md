@@ -10,7 +10,7 @@ This repo is a part of the following:
 1. [contract-verifier-contracts](https://github.com/ton-community/contract-verifier-contracts) - Sources registry contracts which stores an on-chain proof per code cell hash.
 2. contract-verifier-backend (this repo) - Backend for compiling FunC and returning a signature over a message containing the resulting code cell hash.
 3. [contract-verifier-sdk](https://github.com/ton-community/contract-verifier-sdk) - A UI component to fetch and display sources from Ton blockchain and IPFS, including code highlighting.
-4. [ton-contract-verifier](https://github.com/orbs-network/ton-contract-verifier) - A UI app to interact with the backend, contracts and publish an on-chain proof.
+4. [contract-verifier](https://github.com/ton-community/contract-verifier) - A UI app to interact with the backend, contracts and publish an on-chain proof.
 
 ## Configurations
 
