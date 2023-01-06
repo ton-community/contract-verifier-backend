@@ -9,7 +9,12 @@ import { sha256 } from "./utils";
 dotenv.config({ path: ".env.local" });
 dotenv.config({ path: ".env" });
 
-const sourceItemKnownContract: Record<string, string | null> = {};
+const sourceItemKnownContract: Record<string, boolean> = {};
+const contracts: {
+  address: string;
+  mainFile: string;
+  compiler: string;
+}[] = [];
 let lastUpdateTime: null | Date = null;
 
 async function update(verifierIdSha256: Buffer, ipfsProvider: string) {
@@ -35,7 +40,7 @@ async function update(verifierIdSha256: Buffer, ipfsProvider: string) {
       Array.from(potentialDestinations),
       25,
       async function (dest: string, callback) {
-        if (sourceItemKnownContract[dest] !== undefined) {
+        if (sourceItemKnownContract[dest]) {
           callback();
           return;
         }
@@ -49,7 +54,6 @@ async function update(verifierIdSha256: Buffer, ipfsProvider: string) {
           const verifierId = new BN(sourceItemDataStack[0][1].replace("0x", ""), "hex");
 
           if (!verifierId.toBuffer().equals(verifierIdSha256)) {
-            sourceItemKnownContract[dest] = null;
             callback();
             return;
           }
@@ -66,7 +70,20 @@ async function update(verifierIdSha256: Buffer, ipfsProvider: string) {
             `https://${ipfsProvider}/ipfs/${ipfsLink.replace("ipfs://", "")}`,
           );
 
-          sourceItemKnownContract[dest] = ipfsData.data.knownContractAddress;
+          sourceItemKnownContract[dest] = true;
+          const mainFilename = ipfsData.data.sources
+            ?.filter((o: any) => o?.type !== "abi")
+            .reverse()?.[0]?.filename;
+          const nameParts = Array.from(mainFilename.matchAll(/(?:\/|^)([^\/\n]+)/g)).map(
+            // @ts-ignore
+            (m) => m[1],
+          );
+
+          contracts.push({
+            address: ipfsData.data.knownContractAddress,
+            mainFile: nameParts[nameParts.length - 1],
+            compiler: ipfsData.data.compiler,
+          });
         } catch (e) {
           console.warn(e);
         }
@@ -81,11 +98,8 @@ async function update(verifierIdSha256: Buffer, ipfsProvider: string) {
   lastUpdateTime = new Date();
 }
 
-export async function getLatestVerified(
-  verifierId: string,
-  ipfsProvider: string,
-): Promise<string[]> {
+export async function getLatestVerified(verifierId: string, ipfsProvider: string) {
   const verifierIdSha256 = sha256(verifierId);
   await update(verifierIdSha256, ipfsProvider);
-  return Object.values(sourceItemKnownContract).filter((o) => o) as string[];
+  return contracts;
 }
