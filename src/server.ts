@@ -19,6 +19,7 @@ import { FiftSourceVerifier } from "./source-verifier/fift-source-verifier";
 import { FuncSourceVerifier } from "./source-verifier/func-source-verifier";
 import { TactSourceVerifier } from "./source-verifier/tact-source-verifier";
 import { TonReaderClientImpl } from "./ton-reader-client";
+import { getLatestVerified } from "./latest-known-contracts";
 
 const app = express();
 app.use(idMiddleware());
@@ -99,6 +100,8 @@ app.get("/hc", (req, res) => {
     new TonReaderClientImpl(),
   );
 
+  await getLatestVerified(process.env.VERIFIER_ID!, process.env.IPFS_PROVIDER!);
+
   app.post(
     "/source",
     limiter,
@@ -138,6 +141,10 @@ app.get("/hc", (req, res) => {
       tmpDir: path.join(TMP_DIR, req.id),
     });
     res.json(result);
+  });
+
+  app.get("/latestVerified", async (req, res) => {
+    res.json(await getLatestVerified(process.env.VERIFIER_ID!, process.env.IPFS_PROVIDER!));
   });
 
   app.use(function (err: any, req: any, res: any, next: any) {
