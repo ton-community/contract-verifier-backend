@@ -70,7 +70,7 @@ async function update(verifierIdSha256: Buffer, ipfsProvider: string) {
 
           const ipfsData = await axios.get(
             `https://${ipfsProvider}/ipfs/${ipfsLink.replace("ipfs://", "")}`,
-            { timeout: 1000 },
+            { timeout: 3000 },
           );
 
           const mainFilename = ipfsData.data.sources
