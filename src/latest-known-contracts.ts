@@ -22,6 +22,8 @@ async function update(verifierIdSha256: Buffer, ipfsProvider: string) {
   if (lastUpdateTime && new Date() - lastUpdateTime < 10 * 60 * 1000) {
     return;
   }
+
+  lastUpdateTime = new Date();
   const ep = await getHttpEndpoint();
   const tc = new TonClient({ endpoint: ep });
   const limit = 500;
@@ -36,12 +38,12 @@ async function update(verifierIdSha256: Buffer, ipfsProvider: string) {
   );
 
   try {
-    await async.eachLimit(
+    const results = await async.mapLimit(
       Array.from(potentialDestinations),
       25,
       async function (dest: string, callback) {
         if (sourceItemKnownContract[dest]) {
-          callback();
+          callback(null, null);
           return;
         }
 
@@ -68,9 +70,9 @@ async function update(verifierIdSha256: Buffer, ipfsProvider: string) {
 
           const ipfsData = await axios.get(
             `https://${ipfsProvider}/ipfs/${ipfsLink.replace("ipfs://", "")}`,
+            { timeout: 1000 },
           );
 
-          sourceItemKnownContract[dest] = true;
           const mainFilename = ipfsData.data.sources
             ?.filter((o: any) => o?.type !== "abi")
             .reverse()?.[0]?.filename;
@@ -79,23 +81,25 @@ async function update(verifierIdSha256: Buffer, ipfsProvider: string) {
             (m) => m[1],
           );
 
-          contracts.push({
+          sourceItemKnownContract[dest] = true;
+          callback(null, {
             address: ipfsData.data.knownContractAddress,
             mainFile: nameParts[nameParts.length - 1],
             compiler: ipfsData.data.compiler,
           });
         } catch (e) {
           console.warn(e);
+          callback(null);
         }
-
-        callback();
       },
     );
+
+    // @ts-ignore
+    contracts.push(...results.filter((o: any) => o));
   } catch (e) {
     console.warn(e);
+    lastUpdateTime = null;
   }
-
-  lastUpdateTime = new Date();
 }
 
 export async function getLatestVerified(verifierId: string, ipfsProvider: string) {
