@@ -68,10 +68,15 @@ async function update(verifierIdSha256: Buffer, ipfsProvider: string) {
           if (version !== 1) throw new Error("Unsupported version");
           const ipfsLink = contentCell.readRemainingBytes().toString();
 
-          const ipfsData = await axios.get(
-            `https://${ipfsProvider}/ipfs/${ipfsLink.replace("ipfs://", "")}`,
-            { timeout: 3000 },
-          );
+          let ipfsData;
+          try {
+            ipfsData = await axios.get(
+              `https://${ipfsProvider}/ipfs/${ipfsLink.replace("ipfs://", "")}`,
+              { timeout: 3000 },
+            );
+          } catch (e) {
+            throw new Error("Unable to fetch IPFS cid: " + ipfsLink);
+          }
 
           const mainFilename = ipfsData.data.sources
             ?.filter((o: any) => o?.type !== "abi")
