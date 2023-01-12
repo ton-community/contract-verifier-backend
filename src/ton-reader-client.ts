@@ -15,8 +15,6 @@ export interface TonReaderClient {
   getVerifierConfig(verifierId: string, verifierRegistryAddress: string): Promise<VerifierConfig>;
 }
 
-// TODO - copied from contract-verifier-sdk
-// when npm installation is figured out correctly there, this can be eliminated
 export class TonReaderClientImpl implements TonReaderClient {
   private async getTonClient() {
     const endpoint = await getHttpEndpoint();
