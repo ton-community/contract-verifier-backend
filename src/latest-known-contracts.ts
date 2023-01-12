@@ -74,7 +74,7 @@ async function update(verifierIdSha256: Buffer, ipfsProvider: string) {
           try {
             ipfsData = await axios.get(
               `https://${ipfsProvider}/ipfs/${ipfsLink.replace("ipfs://", "")}`,
-              { timeout: 13000 },
+              { timeout: 3000 },
             );
           } catch (e) {
             throw new Error("Unable to fetch IPFS cid: " + ipfsLink);
