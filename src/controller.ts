@@ -70,7 +70,6 @@ export class Controller {
     if (!this.config.allowReverification) {
       const isDeployed = await this.tonReaderClient.isProofDeployed(
         verificationPayload.knownContractHash,
-        this.config.sourcesRegistryAddress,
         this.config.verifierId,
       );
       if (isDeployed) {
