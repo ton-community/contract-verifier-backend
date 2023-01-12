@@ -18,6 +18,8 @@ const contracts: {
 let lastUpdateTime: null | Date = null;
 
 async function update(verifierIdSha256: Buffer, ipfsProvider: string) {
+  // TODO - this means that clients get empty responses quickly instead of waiting
+  // for the single-instance fetch. needsfix
   // @ts-ignore
   if (lastUpdateTime && new Date() - lastUpdateTime < 10 * 60 * 1000) {
     return;
@@ -72,15 +74,19 @@ async function update(verifierIdSha256: Buffer, ipfsProvider: string) {
           try {
             ipfsData = await axios.get(
               `https://${ipfsProvider}/ipfs/${ipfsLink.replace("ipfs://", "")}`,
-              { timeout: 3000 },
+              { timeout: 13000 },
             );
           } catch (e) {
             throw new Error("Unable to fetch IPFS cid: " + ipfsLink);
           }
 
-          const mainFilename = ipfsData.data.sources
-            ?.filter((o: any) => o?.type !== "abi")
-            .reverse()?.[0]?.filename;
+          const mainFilename = ipfsData.data.sources?.sort((a: any, b: any) => {
+            if (a.type && b.type) {
+              return Number(b.type === "code") - Number(a.type === "code");
+            }
+            return Number(b.isEntrypoint) - Number(a.isEntrypoint);
+          })?.[0]?.filename;
+
           const nameParts = Array.from(mainFilename.matchAll(/(?:\/|^)([^\/\n]+)/g)).map(
             // @ts-ignore
             (m) => m[1],
