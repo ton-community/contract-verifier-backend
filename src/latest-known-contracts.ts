@@ -71,9 +71,13 @@ async function update(verifierIdSha256: Buffer, ipfsProvider: string) {
           );
 
           sourceItemKnownContract[dest] = true;
-          const mainFilename = ipfsData.data.sources
-            ?.filter((o: any) => o?.type !== "abi")
-            .reverse()?.[0]?.filename;
+          const mainFilename = ipfsData.data.sources?.sort((a: any, b: any) => {
+            if (a.type && b.type) {
+              return Number(b.type === "code") - Number(a.type === "code");
+            }
+            return Number(b.isEntrypoint) - Number(a.isEntrypoint);
+          })?.[0]?.filename;
+
           const nameParts = Array.from(mainFilename.matchAll(/(?:\/|^)([^\/\n]+)/g)).map(
             // @ts-ignore
             (m) => m[1],
