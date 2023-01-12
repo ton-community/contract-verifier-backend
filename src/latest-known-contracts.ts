@@ -18,10 +18,14 @@ const contracts: {
 let lastUpdateTime: null | Date = null;
 
 async function update(verifierIdSha256: Buffer, ipfsProvider: string) {
+  // TODO - this means that clients get empty responses quickly instead of waiting
+  // for the single-instance fetch. needsfix
   // @ts-ignore
   if (lastUpdateTime && new Date() - lastUpdateTime < 10 * 60 * 1000) {
     return;
   }
+
+  lastUpdateTime = new Date();
   const ep = await getHttpEndpoint();
   const tc = new TonClient({ endpoint: ep });
   const limit = 500;
@@ -36,12 +40,12 @@ async function update(verifierIdSha256: Buffer, ipfsProvider: string) {
   );
 
   try {
-    await async.eachLimit(
+    const results = await async.mapLimit(
       Array.from(potentialDestinations),
       25,
       async function (dest: string, callback) {
         if (sourceItemKnownContract[dest]) {
-          callback();
+          callback(null, null);
           return;
         }
 
@@ -66,11 +70,16 @@ async function update(verifierIdSha256: Buffer, ipfsProvider: string) {
           if (version !== 1) throw new Error("Unsupported version");
           const ipfsLink = contentCell.readRemainingBytes().toString();
 
-          const ipfsData = await axios.get(
-            `https://${ipfsProvider}/ipfs/${ipfsLink.replace("ipfs://", "")}`,
-          );
+          let ipfsData;
+          try {
+            ipfsData = await axios.get(
+              `https://${ipfsProvider}/ipfs/${ipfsLink.replace("ipfs://", "")}`,
+              { timeout: 3000 },
+            );
+          } catch (e) {
+            throw new Error("Unable to fetch IPFS cid: " + ipfsLink);
+          }
 
-          sourceItemKnownContract[dest] = true;
           const mainFilename = ipfsData.data.sources?.sort((a: any, b: any) => {
             if (a.type && b.type) {
               return Number(b.type === "code") - Number(a.type === "code");
@@ -83,23 +92,25 @@ async function update(verifierIdSha256: Buffer, ipfsProvider: string) {
             (m) => m[1],
           );
 
-          contracts.push({
+          sourceItemKnownContract[dest] = true;
+          callback(null, {
             address: ipfsData.data.knownContractAddress,
             mainFile: nameParts[nameParts.length - 1],
             compiler: ipfsData.data.compiler,
           });
         } catch (e) {
           console.warn(e);
+          callback(null);
         }
-
-        callback();
       },
     );
+
+    // @ts-ignore
+    contracts.push(...results.filter((o: any) => o));
   } catch (e) {
     console.warn(e);
+    lastUpdateTime = null;
   }
-
-  lastUpdateTime = new Date();
 }
 
 export async function getLatestVerified(verifierId: string, ipfsProvider: string) {

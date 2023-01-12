@@ -100,7 +100,8 @@ app.get("/hc", (req, res) => {
     new TonReaderClientImpl(),
   );
 
-  await getLatestVerified(process.env.VERIFIER_ID!, process.env.IPFS_PROVIDER!);
+  // Not awaiting on purpose, otherwise this may take too much time.
+  getLatestVerified(process.env.VERIFIER_ID!, process.env.IPFS_PROVIDER!);
 
   app.post(
     "/source",
