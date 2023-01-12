@@ -75,11 +75,7 @@ class StubTonReaderClient implements TonReaderClient {
       verifiers: [Buffer.from(serverKeypair.publicKey), Buffer.from(server2Keypair.publicKey)],
     };
   }
-  async isProofDeployed(
-    codeCellHash: string,
-    sourcesRegistryAddress: string,
-    verifierId: string,
-  ): Promise<boolean | undefined> {
+  async isProofDeployed(codeCellHash: string, verifierId: string): Promise<boolean | undefined> {
     return false;
   }
 }
