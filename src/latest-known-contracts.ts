@@ -31,15 +31,15 @@ async function update(verifierIdSha256: Buffer, ipfsProvider: string) {
   const limit = 500;
   const address = process.env.SOURCES_REGISTRY!;
 
-  const txn = await axios.get(
-    `https://toncenter.com/api/index/getTransactionsByAddress?address=${address}&limit=${limit}&offset=0&sort=desc&include_msg_body=false`,
-  );
-
-  const potentialDestinations = new Set<string>(
-    txn.data.map((t: any) => t.out_msgs?.[0]?.destination).filter((o?: string) => o),
-  );
-
   try {
+    const txn = await axios.get(
+      `https://toncenter.com/api/index/getTransactionsByAddress?address=${address}&limit=${limit}&offset=0&sort=desc&include_msg_body=false`,
+    );
+
+    const potentialDestinations = new Set<string>(
+      txn.data.map((t: any) => t.out_msgs?.[0]?.destination).filter((o?: string) => o),
+    );
+
     const results = await async.mapLimit(
       Array.from(potentialDestinations),
       25,
