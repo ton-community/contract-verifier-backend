@@ -53,7 +53,7 @@ class StubSourceVerifier implements SourceVerifier {
       result: "similar",
       error: null,
       compilerSettings: {
-        funcVersion: "0.3.0",
+        funcVersion: "0.4.0",
         commandLine: "some command line",
       },
       hash: emptyCellHash,
@@ -131,7 +131,7 @@ describe("Controller", () => {
     const result = await controller.addSource({
       compiler: "func",
       compilerSettings: {
-        funcVersion: "0.3.0",
+        funcVersion: "0.4.0",
         commandLine: "", // TODO why is this mandatory
       },
       knownContractAddress: "N/A",
@@ -149,7 +149,7 @@ describe("Controller", () => {
       const { msgCell } = await controller2.addSource({
         compiler: "func",
         compilerSettings: {
-          funcVersion: "0.3.0",
+          funcVersion: "0.2.0",
           commandLine: "", // TODO why is this mandatory
         },
         knownContractAddress: "N/A",
