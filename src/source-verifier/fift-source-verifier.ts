@@ -31,7 +31,7 @@ boc>B "${b64OutFile}" B>file`;
 
 export class FiftSourceVerifier implements SourceVerifier {
   async verify(payload: SourceVerifyPayload): Promise<CompileResult> {
-    const funcVersion: FuncCompilerVersion = "0.3.0"; // Single version, assuming fift doesn't affect code hash
+    const funcVersion: FuncCompilerVersion = "0.4.0"; // Single version, assuming fift doesn't affect code hash
     const sources = payload.sources.map((s) => ({ filename: s.path }));
 
     try {

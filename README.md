@@ -14,7 +14,7 @@ This repo is a part of the following:
 
 ## Configurations
 
-The backend supports compiling in func 0.2.0 and 0.3.0.
+The backend supports compiling in func 0.2.0, 0.3.0, 0.4.0.
 
 ## Preqrequisites
 
@@ -30,7 +30,7 @@ To deploy on heroku, you can use the [func compilation buildpack](https://github
 
 #### Locally
 
-- Ensure you have working binaries for func 0.2.0/0.3.0 + fiftlib in this format:
+- Ensure you have working binaries for func 0.2.0/0.3.0/0.4.0 + fiftlib in this format:
 
 ```
   resources/
