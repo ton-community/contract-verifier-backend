@@ -106,7 +106,7 @@ async function update(verifierIdSha256: Buffer, ipfsProvider: string) {
     );
 
     // @ts-ignore
-    contracts.push(...results.filter((o: any) => o));
+    contracts.unshift(...results.filter((o: any) => o));
   } catch (e) {
     console.warn(e);
     lastUpdateTime = null;
