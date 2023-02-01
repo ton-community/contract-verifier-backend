@@ -1,6 +1,6 @@
 export type Compiler = "func" | "fift" | "tact";
 
-export type FuncCompilerVersion = "0.2.0" | "0.3.0" | "0.4.0";
+import { FuncCompilerVersion } from "@ton-community/contract-verifier-sdk";
 
 export interface SourceVerifier {
   verify(payload: SourceVerifyPayload): Promise<CompileResult>;
