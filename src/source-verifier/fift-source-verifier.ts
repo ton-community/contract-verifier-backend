@@ -2,10 +2,11 @@ import { promisify } from "util";
 import { exec } from "child_process";
 const execAsync = promisify(exec);
 import { readFile, writeFile } from "fs/promises";
-import { CompileResult, FuncCompilerVersion, SourceVerifier, SourceVerifyPayload } from "../types";
+import { CompileResult, SourceVerifier, SourceVerifyPayload } from "../types";
 import path from "path";
 import { Cell } from "ton";
 import { funcCompilers } from "../binaries";
+import { FuncCompilerVersion } from "@ton-community/contract-verifier-sdk";
 
 export async function fiftToCodeCell(
   funcVersion: FuncCompilerVersion,
@@ -31,7 +32,7 @@ boc>B "${b64OutFile}" B>file`;
 
 export class FiftSourceVerifier implements SourceVerifier {
   async verify(payload: SourceVerifyPayload): Promise<CompileResult> {
-    const funcVersion: FuncCompilerVersion = "0.4.0"; // Single version, assuming fift doesn't affect code hash
+    const funcVersion: FuncCompilerVersion = "0.4.1"; // Single version, assuming fift doesn't affect code hash
     const sources = payload.sources.map((s) => ({ filename: s.path }));
 
     try {

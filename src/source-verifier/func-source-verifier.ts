@@ -2,7 +2,6 @@ import { promisify } from "util";
 import { exec } from "child_process";
 const execAsync = promisify(exec);
 import {
-  FuncCompilerVersion,
   SourceVerifier,
   SourceVerifyPayload,
   CompileResult,
@@ -12,6 +11,7 @@ import {
 import path from "path";
 import { funcCompilers } from "../binaries";
 import { fiftToCodeCell } from "./fift-source-verifier";
+import { FuncCompilerVersion } from "@ton-community/contract-verifier-sdk";
 
 function prepareFuncCommand(
   executable: string,
