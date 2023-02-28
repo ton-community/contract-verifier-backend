@@ -25,6 +25,7 @@ export type FiftCliCompileSettings = {
 
 export type TactCliCompileSettings = {
   tactVersion: string;
+  parameters?: string | null;
 };
 
 export type FuncSourceCompileResult = {
