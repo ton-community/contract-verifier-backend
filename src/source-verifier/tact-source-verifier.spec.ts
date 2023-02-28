@@ -5,13 +5,13 @@ describe("TactSourceVerifier", () => {
 
     const res = await tactVerifier.verify({
       compiler: "tact",
-      compilerSettings: { tactVersion: "0.5.0" },
+      compilerSettings: { tactVersion: "1.0.0-rc8" },
       knownContractAddress: "",
       knownContractHash: "htGkXV77gc/Tx5Z55tyTyZT8aSpmpnpkFPZpe4lPMIQ=",
       senderAddress: "",
       sources: [
         {
-          path: "src/source-verifier/main.tact",
+          path: "src/source-verifier/echo.pkg",
         },
       ],
       tmpDir: "",

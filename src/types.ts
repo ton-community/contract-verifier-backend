@@ -24,7 +24,7 @@ export type FiftCliCompileSettings = {
 };
 
 export type TactCliCompileSettings = {
-  tactVersion: "0.5.0";
+  tactVersion: string;
 };
 
 export type FuncSourceCompileResult = {
@@ -41,7 +41,6 @@ export type FiftSourceCompileResult = {
 
 export type TactSourceCompileResult = {
   filename: string;
-  type: "code" | "abi";
 };
 
 export type CompileResult = {
