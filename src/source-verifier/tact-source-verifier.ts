@@ -1,7 +1,3 @@
-import fs from "fs/promises";
-import path from "path";
-import { promisify } from "util";
-import { exec } from "child_process";
 import { Cell } from "ton";
 import {
   SourceVerifier,
@@ -11,18 +7,25 @@ import {
 } from "../types";
 import { verify } from "@tact-lang/compiler";
 
-const execAsync = promisify(exec);
-
 export class TactSourceVerifier implements SourceVerifier {
+  readFile: (path: string) => Promise<Buffer>;
+
+  constructor(readFile: (path: string) => Promise<Buffer>) {
+    this.readFile = readFile;
+  }
+
   async verify(payload: SourceVerifyPayload): Promise<CompileResult> {
-    const pkg = (await fs.readFile(payload.sources[0].path)).toString("utf8");
+    const pkg = (await this.readFile(payload.sources[0].path)).toString("utf8");
+    console.log(pkg);
     const tactVersion = (payload.compilerSettings as TactCliCompileSettings).tactVersion;
+
+    const output: string[] = [];
 
     const v = await verify({
       pkg,
       logger: {
-        error: console.error,
-        log: console.log,
+        error: output.push,
+        log: output.push,
       },
     });
 
@@ -31,7 +34,7 @@ export class TactSourceVerifier implements SourceVerifier {
         compilerSettings: {
           tactVersion,
         },
-        error: v.error,
+        error: [v.error, ...output].join("\n"),
         hash: null,
         result: v.error === "verification-failed" ? "not_similar" : "unknown_error",
         sources: [],
