@@ -1,0 +1,17 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`TactSourceVerifier compiles 1`] = `
+Object {
+  "compilerSettings": Object {
+    "tactVersion": "1.0.0-rc8",
+  },
+  "error": null,
+  "hash": "htGkXV77gc/Tx5Z55tyTyZT8aSpmpnpkFPZpe4lPMIQ=",
+  "result": "similar",
+  "sources": Array [
+    Object {
+      "filename": "echo.pkg",
+    },
+  ],
+}
+`;
