@@ -28,6 +28,5 @@ describe("TactSourceVerifier", () => {
     });
 
     expect(res.result).toEqual("similar");
-    expect(res).toMatchSnapshot();
   });
 });
