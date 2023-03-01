@@ -195,8 +195,6 @@ export class Controller {
 
     const compileResult = await compiler.verify(sourceToVerify);
 
-    console.log(compileResult);
-
     if (compileResult.result !== "similar") {
       throw new Error("Invalid compilation result");
     }

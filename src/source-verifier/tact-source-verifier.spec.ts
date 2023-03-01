@@ -29,4 +29,30 @@ describe("TactSourceVerifier", () => {
 
     expect(res.result).toEqual("similar");
   });
+
+  it("invalid file format", async function () {
+    const tactVerifier = new TactSourceVerifier({
+      writeFile: async (_path, content) => {},
+      readFile: async (path) => {
+        if (path === "echo.pkg") return Buffer.from("{{");
+        throw new Error("Unknown path");
+      },
+    });
+
+    const res = await tactVerifier.verify({
+      compiler: "tact",
+      compilerSettings: { tactVersion: "1.0.0-rc8" },
+      knownContractAddress: "",
+      knownContractHash: "htGkXV77gc/Tx5Z55tyTyZT8aSpmpnpkFPZpe4lPMIQ=",
+      senderAddress: "",
+      sources: [
+        {
+          path: "echo.pkg",
+        },
+      ],
+      tmpDir: "",
+    });
+
+    expect(res.result).toEqual("unknown_error");
+  });
 });
