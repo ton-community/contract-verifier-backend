@@ -7,9 +7,9 @@ dotenv.config({ path: ".env" });
 import cors from "cors";
 import { Controller } from "./controller";
 import multer from "multer";
-import { readFile, rm } from "fs/promises";
+import { readFile, rm, writeFile } from "fs/promises";
 import mkdirp from "mkdirp";
-import { rmSync } from "fs";
+import { rmSync, write } from "fs";
 import path from "path";
 import idMiddleware from "./req-id-middleware";
 import { IpfsCodeStorageProvider } from "./ipfs-code-storage-provider";
@@ -26,7 +26,7 @@ app.use(idMiddleware());
 app.use(cors());
 app.use(express.json());
 
-checkPrerequisites();
+if (process.env.NODE_ENV === "production") checkPrerequisites();
 
 const limiter = rateLimit({
   windowMs: 5 * 60 * 1000, // 5 minutes
@@ -88,7 +88,13 @@ app.get("/hc", (req, res) => {
     {
       func: new FuncSourceVerifier(),
       fift: new FiftSourceVerifier(),
-      tact: new TactSourceVerifier(),
+      tact: new TactSourceVerifier({
+        readFile: readFile,
+        writeFile: async (filePath, content) => {
+          await mkdirp(path.dirname(filePath));
+          await writeFile(filePath, content);
+        },
+      }),
     },
     {
       verifierId: process.env.VERIFIER_ID!,
