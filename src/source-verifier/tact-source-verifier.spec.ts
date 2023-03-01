@@ -5,9 +5,12 @@ const pkg =
 
 describe("TactSourceVerifier", () => {
   it("compiles", async function () {
-    const tactVerifier = new TactSourceVerifier(async (path) => {
-      if (path === "echo.pkg") return Buffer.from(pkg, "base64");
-      throw new Error("Unknown path");
+    const tactVerifier = new TactSourceVerifier({
+      writeFile: async (_path, content) => {},
+      readFile: async (path) => {
+        if (path === "echo.pkg") return Buffer.from(pkg, "base64");
+        throw new Error("Unknown path");
+      },
     });
 
     const res = await tactVerifier.verify({
@@ -24,6 +27,7 @@ describe("TactSourceVerifier", () => {
       tmpDir: "",
     });
 
+    expect(res.result).toEqual("similar");
     expect(res).toMatchSnapshot();
   });
 });
