@@ -50,6 +50,25 @@ export class TactSourceVerifier implements SourceVerifier {
       };
     }
 
+    const sources = (
+      await Promise.all(
+        Object.entries(v.files)
+          .filter(([filename]) => !filename.match(/\.(fif|boc|ts|md)/))
+          .map(async ([filename, contentB64]) => {
+            const writePath = path.join(payload.tmpDir, filename);
+            let content = Buffer.from(contentB64, "base64").toString("utf-8");
+            if (filename.match(/\.(pkg|abi)/)) {
+              content = JSON.stringify(JSON.parse(content), null, 3);
+            }
+            await this.fileSystem.writeFile(writePath, content);
+            return { filename };
+          }),
+      )
+    ).sort(
+      ({ filename: filenameA }, { filename: filenameB }) =>
+        (filenameA.endsWith(".tact") ? 1 : 0) - (filenameB.endsWith(".tact") ? 1 : 0),
+    );
+
     return {
       compilerSettings: {
         tactVersion: pkgParsed.compiler.version,
@@ -58,11 +77,7 @@ export class TactSourceVerifier implements SourceVerifier {
       error: null,
       hash: Cell.fromBoc(Buffer.from(v.package.code, "base64"))[0].hash().toString("base64"),
       result: "similar",
-      sources: [
-        {
-          filename: payload.sources[0].path,
-        },
-      ],
+      sources,
     };
   }
 }

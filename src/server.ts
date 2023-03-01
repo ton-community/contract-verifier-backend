@@ -9,7 +9,7 @@ import { Controller } from "./controller";
 import multer from "multer";
 import { readFile, rm, writeFile } from "fs/promises";
 import mkdirp from "mkdirp";
-import { rmSync } from "fs";
+import { rmSync, write } from "fs";
 import path from "path";
 import idMiddleware from "./req-id-middleware";
 import { IpfsCodeStorageProvider } from "./ipfs-code-storage-provider";
@@ -90,7 +90,10 @@ app.get("/hc", (req, res) => {
       fift: new FiftSourceVerifier(),
       tact: new TactSourceVerifier({
         readFile: readFile,
-        writeFile: writeFile,
+        writeFile: async (filePath, content) => {
+          await mkdirp(path.dirname(filePath));
+          await writeFile(filePath, content);
+        },
       }),
     },
     {
