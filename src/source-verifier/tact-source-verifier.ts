@@ -8,9 +8,10 @@ import {
 import { PackageFileFormat, verify } from "@tact-lang/compiler";
 import path from "path";
 
-type FileSystem = {
+export type FileSystem = {
   readFile: (path: string) => Promise<Buffer>;
   writeFile: (path: string, content: string | Buffer) => Promise<void>;
+  readdir: (path: string) => Promise<string[]>;
 };
 
 export class TactSourceVerifier implements SourceVerifier {

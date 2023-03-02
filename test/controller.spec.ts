@@ -25,11 +25,11 @@ const emptyCellHash = new Cell().hash().toString("base64");
 class StubCodeStorageProvider implements CodeStorageProvider {
   storage: Map<string, string> = new Map();
 
-  async write(...files: FileUploadSpec[]): Promise<string[]> {
+  async write(files: FileUploadSpec[], pin: boolean): Promise<string[]> {
     return Promise.all(files.map((file) => ipfsHash(file.name)));
   }
 
-  async writeFromContent(...files: Buffer[]): Promise<string[]> {
+  async writeFromContent(files: Buffer[], pin: boolean): Promise<string[]> {
     const hashes = await Promise.all(files.map((file) => ipfsHash(file)));
     files.forEach((file, i) => {
       this.storage.set(hashes[i], file.toString("utf8"));

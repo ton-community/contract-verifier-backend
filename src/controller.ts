@@ -92,7 +92,7 @@ export class Controller {
         name: s.filename,
       }),
     );
-    const fileLocators = await this.ipfsProvider.write(...sourcesToUpload);
+    const fileLocators = await this.ipfsProvider.write(sourcesToUpload, true);
 
     const sourceSpec: SourceItem = {
       compilerSettings: compileResult.compilerSettings,
@@ -110,7 +110,8 @@ export class Controller {
 
     // Upload source spec JSON to IPFS
     const [ipfsLink] = await this.ipfsProvider.writeFromContent(
-      Buffer.from(JSON.stringify(sourceSpec)),
+      [Buffer.from(JSON.stringify(sourceSpec))],
+      true,
     );
 
     console.log(ipfsLink);

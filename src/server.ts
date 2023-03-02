@@ -7,9 +7,9 @@ dotenv.config({ path: ".env" });
 import cors from "cors";
 import { Controller } from "./controller";
 import multer from "multer";
-import { readFile, rm, writeFile } from "fs/promises";
+import { readFile, rm, writeFile, readdir } from "fs/promises";
 import mkdirp from "mkdirp";
-import { rmSync, write } from "fs";
+import { rmSync } from "fs";
 import path from "path";
 import idMiddleware from "./req-id-middleware";
 import { IpfsCodeStorageProvider } from "./ipfs-code-storage-provider";
@@ -17,9 +17,10 @@ import rateLimit from "express-rate-limit";
 import { checkPrerequisites } from "./check-prerequisites";
 import { FiftSourceVerifier } from "./source-verifier/fift-source-verifier";
 import { FuncSourceVerifier } from "./source-verifier/func-source-verifier";
-import { TactSourceVerifier } from "./source-verifier/tact-source-verifier";
+import { TactSourceVerifier, FileSystem } from "./source-verifier/tact-source-verifier";
 import { TonReaderClientImpl } from "./ton-reader-client";
 import { getLatestVerified } from "./latest-known-contracts";
+import { DeployController } from "./deploy-controller";
 
 const app = express();
 app.use(idMiddleware());
@@ -45,7 +46,7 @@ app.use(async (req, res, next) => {
   next();
 });
 
-const upload = multer({
+const sourcesUpload = multer({
   storage: multer.diskStorage({
     destination: async (req, file, callback) => {
       const _path = path.join(
@@ -61,6 +62,40 @@ const upload = multer({
       callback(null, file.originalname);
     },
   }),
+  limits: {
+    files: 50,
+    fileSize: 200 * 1024,
+  },
+});
+
+const tactStagingUpload = multer({
+  storage: multer.diskStorage({
+    destination: async (req, file, callback) => {
+      const _path = path.join(
+        TMP_DIR,
+        req.id,
+        file.fieldname.match(/\//) ? file.fieldname.split("/")[0] : "",
+      );
+
+      await mkdirp(_path);
+      callback(null, _path);
+    },
+    filename: (req, file, callback) => {
+      callback(null, file.originalname);
+    },
+  }),
+  limits: {
+    files: 2,
+    fileSize: 200 * 1024,
+  },
+  fileFilter(req, file, callback) {
+    console.log(file);
+    if (!file.originalname.match(/\.(boc|pkg)/)) {
+      callback(new Error("Only boc or pkg are allowed"));
+      return;
+    }
+    callback(null, true);
+  },
 });
 
 app.use((req, res, next) => {
@@ -83,18 +118,29 @@ app.get("/hc", (req, res) => {
 });
 
 (async () => {
+  const fileSystem: FileSystem = {
+    readFile: readFile,
+    writeFile: async (filePath, content) => {
+      await mkdirp(path.dirname(filePath));
+      await writeFile(filePath, content);
+    },
+    readdir: async (path) => readdir(path),
+  };
+
+  const deployController = new DeployController(
+    new IpfsCodeStorageProvider(
+      process.env.TACT_DEPLOYER_INFURA_ID!,
+      process.env.TACT_DEPLOYER_INFURA_SECRET!,
+    ),
+    fileSystem,
+  );
+
   const controller = new Controller(
-    new IpfsCodeStorageProvider(),
+    new IpfsCodeStorageProvider(process.env.INFURA_ID!, process.env.INFURA_SECRET!),
     {
       func: new FuncSourceVerifier(),
       fift: new FiftSourceVerifier(),
-      tact: new TactSourceVerifier({
-        readFile: readFile,
-        writeFile: async (filePath, content) => {
-          await mkdirp(path.dirname(filePath));
-          await writeFile(filePath, content);
-        },
-      }),
+      tact: new TactSourceVerifier(fileSystem),
     },
     {
       verifierId: process.env.VERIFIER_ID!,
@@ -116,7 +162,7 @@ app.get("/hc", (req, res) => {
       await mkdirp(path.join(TMP_DIR, req.id));
       next();
     },
-    upload.any(),
+    sourcesUpload.any(),
     async (req, res) => {
       const jsonFile = (req.files! as any[]).find((f) => f.fieldname === "json").path;
 
@@ -149,6 +195,22 @@ app.get("/hc", (req, res) => {
     });
     res.json(result);
   });
+
+  app.post(
+    "/prepareTactDeployment",
+    limiter,
+    async (req, _, next) => {
+      await mkdirp(path.join(TMP_DIR, req.id));
+      next();
+    },
+    tactStagingUpload.any(),
+    async (req, res) => {
+      const result = await deployController.process({
+        tmpDir: path.join(TMP_DIR, req.id),
+      });
+      res.json(result);
+    },
+  );
 
   app.get("/latestVerified", async (req, res) => {
     res.json(await getLatestVerified(process.env.VERIFIER_ID!, process.env.IPFS_PROVIDER!));

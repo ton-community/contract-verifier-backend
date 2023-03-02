@@ -9,6 +9,8 @@ export function checkPrerequisites() {
     "INFURA_ID",
     "INFURA_SECRET",
     "PRIVATE_KEY",
+    "TACT_DEPLOYER_INFURA_ID",
+    "TACT_DEPLOYER_INFURA_SECRET",
   ]
     .filter((e) => !process.env[e])
     .join(" ");
