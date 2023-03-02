@@ -11,6 +11,7 @@ describe("TactSourceVerifier", () => {
         if (path === "echo.pkg") return Buffer.from(pkg, "base64");
         throw new Error("Unknown path");
       },
+      readdir: async () => [],
     });
 
     const res = await tactVerifier.verify({
@@ -37,6 +38,7 @@ describe("TactSourceVerifier", () => {
         if (path === "echo.pkg") return Buffer.from("{{");
         throw new Error("Unknown path");
       },
+      readdir: async () => [],
     });
 
     const res = await tactVerifier.verify({
