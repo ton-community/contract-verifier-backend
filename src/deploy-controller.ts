@@ -15,9 +15,7 @@ export class DeployController {
   async process({ tmpDir }: { tmpDir: string }) {
     const files = await this.fileSystem.readdir(tmpDir);
 
-    console.log(files);
-
-    if (files.length !== 2) throw new Error("Expecting exactly 2 files");
+    if (files.length !== 2) throw new Error("Expecting exactly 1 boc file and 1 pkg file");
 
     const fileContents = await Promise.all(
       files.map(async (name) => {
@@ -28,7 +26,14 @@ export class DeployController {
     );
 
     const pkgFile = fileContents.find((f) => f.name.endsWith(".pkg"))!.content.toString("utf-8");
-    const pkgContents: PackageFileFormat = JSON.parse(pkgFile);
+
+    let pkgContents: PackageFileFormat;
+
+    try {
+      pkgContents = JSON.parse(pkgFile);
+    } catch (e) {
+      throw new Error("Unable to parse pkg file");
+    }
 
     const [rootHash] = await this.storageProvider.writeFromContent(
       [

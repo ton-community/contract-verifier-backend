@@ -89,12 +89,7 @@ const tactStagingUpload = multer({
     fileSize: 200 * 1024,
   },
   fileFilter(req, file, callback) {
-    console.log(file);
-    if (!file.originalname.match(/\.(boc|pkg)/)) {
-      callback(new Error("Only boc or pkg are allowed"));
-      return;
-    }
-    callback(null, true);
+    callback(null, !!file.originalname.match(/\.(boc|pkg)/));
   },
 });
 
@@ -205,10 +200,14 @@ app.get("/hc", (req, res) => {
     },
     tactStagingUpload.any(),
     async (req, res) => {
-      const result = await deployController.process({
-        tmpDir: path.join(TMP_DIR, req.id),
-      });
-      res.json(result);
+      try {
+        const result = await deployController.process({
+          tmpDir: path.join(TMP_DIR, req.id),
+        });
+        res.json(result);
+      } catch (e) {
+        res.status(500).send(e.toString());
+      }
     },
   );
 
