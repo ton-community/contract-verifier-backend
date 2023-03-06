@@ -1,6 +1,7 @@
 import path from "path";
 import { IpfsCodeStorageProvider } from "./ipfs-code-storage-provider";
 import { FileSystem } from "./source-verifier/tact-source-verifier";
+import { PackageFileFormat } from "@tact-lang/compiler";
 
 export class DeployController {
   storageProvider: IpfsCodeStorageProvider;
@@ -26,6 +27,9 @@ export class DeployController {
       }),
     );
 
+    const pkgFile = fileContents.find((f) => f.name.endsWith(".pkg"))!.content.toString("utf-8");
+    const pkgContents: PackageFileFormat = JSON.parse(pkgFile);
+
     const [rootHash] = await this.storageProvider.writeFromContent(
       [
         JSON.stringify({
@@ -36,6 +40,8 @@ export class DeployController {
       ],
       false,
     );
+
+    await this.storageProvider.writeFromContent([pkgContents.abi], true);
 
     return `https://verifier.ton.org/tactDeployer/${rootHash.replace("ipfs://", "")}`;
   }
