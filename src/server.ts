@@ -206,6 +206,7 @@ app.get("/hc", (req, res) => {
         });
         res.json(result);
       } catch (e) {
+        console.error(e.toString());
         res.status(500).send(e.toString());
       }
     },

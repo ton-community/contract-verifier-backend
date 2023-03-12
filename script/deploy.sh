@@ -7,7 +7,7 @@ if [ ! -f ".secret" ]; then
 fi
 source .secret
 
-values=("prod-1" "prod-2" "prod-3")
+values=("prod-testnet-1" "prod-1" "prod-2" "prod-3")
 
 for heroku_app in "${values[@]}"; do
   echo "Processing heroku_app: $heroku_app"

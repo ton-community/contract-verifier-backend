@@ -75,11 +75,15 @@ export class TactSourceVerifier implements SourceVerifier {
           (filenameA.endsWith(".tact") ? 1 : 0) - (filenameB.endsWith(".tact") ? 1 : 0),
       );
 
+      const compiledHash = Cell.fromBoc(Buffer.from(v.package.code, "base64"))[0]
+        .hash()
+        .toString("base64");
+
       return {
         compilerSettings,
         error: null,
-        hash: Cell.fromBoc(Buffer.from(v.package.code, "base64"))[0].hash().toString("base64"),
-        result: "similar",
+        hash: compiledHash,
+        result: compiledHash === payload.knownContractHash ? "similar" : "not_similar",
         sources,
       };
     } catch (e) {

@@ -5,6 +5,7 @@ import axios from "axios";
 import BN from "bn.js";
 import async from "async";
 import { sha256 } from "./utils";
+import { getTonClient } from "./ton-reader-client";
 
 dotenv.config({ path: ".env.local" });
 dotenv.config({ path: ".env" });
@@ -26,14 +27,15 @@ async function update(verifierIdSha256: Buffer, ipfsProvider: string) {
   }
 
   lastUpdateTime = new Date();
-  const ep = await getHttpEndpoint();
-  const tc = new TonClient({ endpoint: ep });
+  const tc = await getTonClient();
   const limit = 500;
   const address = process.env.SOURCES_REGISTRY!;
 
   try {
     const txn = await axios.get(
-      `https://toncenter.com/api/index/getTransactionsByAddress?address=${address}&limit=${limit}&offset=0&sort=desc&include_msg_body=false`,
+      `https://${
+        process.env.NETWORK === "testnet" ? "testnet." : ""
+      }toncenter.com/api/index/getTransactionsByAddress?address=${address}&limit=${limit}&offset=0&sort=desc&include_msg_body=false`,
     );
 
     const potentialDestinations = new Set<string>(

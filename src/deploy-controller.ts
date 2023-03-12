@@ -48,6 +48,8 @@ export class DeployController {
 
     await this.storageProvider.writeFromContent([pkgContents.abi], true);
 
-    return `https://verifier.ton.org/tactDeployer/${rootHash.replace("ipfs://", "")}`;
+    return `https://verifier.ton.org/tactDeployer/${rootHash.replace("ipfs://", "")}${
+      process.env.NETWORK === "testnet" ? "?testnet" : ""
+    }`;
   }
 }

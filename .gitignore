@@ -8,3 +8,4 @@ tmp/
 resources/
 coverage/
 .secret
+secrets-config.json

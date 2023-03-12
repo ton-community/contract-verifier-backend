@@ -15,18 +15,20 @@ export interface TonReaderClient {
   getVerifierConfig(verifierId: string, verifierRegistryAddress: string): Promise<VerifierConfig>;
 }
 
-export class TonReaderClientImpl implements TonReaderClient {
-  private async getTonClient() {
-    const endpoint = await getHttpEndpoint();
-    console.log("Using endpoint:" + endpoint);
-    return new TonClient({ endpoint });
-  }
+export async function getTonClient() {
+  const endpoint = await getHttpEndpoint({
+    network: process.env.NETWORK === "testnet" ? "testnet" : "mainnet",
+  });
+  console.log("Using endpoint:" + endpoint);
+  return new TonClient({ endpoint });
+}
 
+export class TonReaderClientImpl implements TonReaderClient {
   async getVerifierConfig(
     verifierId: string,
     verifierRegistryAddress: string,
   ): Promise<VerifierConfig> {
-    const tc = await this.getTonClient();
+    const tc = await getTonClient();
     const res = await tc.callGetMethod(Address.parse(verifierRegistryAddress), "get_verifier", [
       ["num", new BN(sha256(verifierId)).toString()],
     ]);
@@ -47,6 +49,9 @@ export class TonReaderClientImpl implements TonReaderClient {
   }
 
   async isProofDeployed(codeCellHash: string, verifierId: string): Promise<boolean | undefined> {
-    return !!(await ContractVerifier.getSourcesJsonUrl(codeCellHash, { verifier: verifierId }));
+    return !!(await ContractVerifier.getSourcesJsonUrl(codeCellHash, {
+      verifier: verifierId,
+      testnet: process.env.NETWORK === "testnet",
+    }));
   }
 }
