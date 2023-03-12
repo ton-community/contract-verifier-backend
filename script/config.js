@@ -2,7 +2,6 @@ const execSync = require("child_process").execSync;
 
 const config = require("../secrets-config.json");
 
-// for (const network of ["mainnet", "testnet"]) {
 for (const network of ["testnet", "mainnet"]) {
   for (const node of Object.keys(config[network].nodes)) {
     const env = Object.entries(config.shared.env);
