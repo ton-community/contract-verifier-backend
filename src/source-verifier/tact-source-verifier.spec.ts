@@ -28,6 +28,8 @@ describe("TactSourceVerifier", () => {
       tmpDir: "",
     });
 
+    console.log(res.error);
+
     expect(res.result).toEqual("similar");
   });
 

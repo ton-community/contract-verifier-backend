@@ -1,11 +1,7 @@
 import { Cell } from "ton";
-import {
-  SourceVerifier,
-  SourceVerifyPayload,
-  CompileResult,
-  TactCliCompileSettings,
-} from "../types";
-import { PackageFileFormat, verify } from "@tact-lang/compiler";
+import { SourceVerifier, SourceVerifyPayload, CompileResult } from "../types";
+import { PackageFileFormat } from "tact-1.0.0";
+import type { verify as VerifyFunction } from "tact-1.0.0";
 import path from "path";
 
 export type FileSystem = {
@@ -37,6 +33,15 @@ export class TactSourceVerifier implements SourceVerifier {
       };
 
       const output: string[] = [];
+
+      const verify: typeof VerifyFunction = await import(`tact-${pkgParsed.compiler.version}`)
+        .then((m) => m.verify)
+        .catch((e) => {
+          output.push(
+            `Failed to load tact v${pkgParsed.compiler.version}. It probably doesn't exist on the server.`,
+          );
+          throw e;
+        });
 
       const v = await verify({
         pkg,

@@ -1,7 +1,7 @@
 import path from "path";
 import { IpfsCodeStorageProvider } from "./ipfs-code-storage-provider";
 import { FileSystem } from "./source-verifier/tact-source-verifier";
-import { PackageFileFormat } from "@tact-lang/compiler";
+import { PackageFileFormat } from "tact-1.0.0";
 
 export class DeployController {
   storageProvider: IpfsCodeStorageProvider;
