@@ -23,10 +23,7 @@ export type FiftCliCompileSettings = {
   commandLine: string;
 };
 
-export type TactCliCompileSettings = {
-  tactVersion: string;
-  parameters?: string | null;
-};
+export type TactCliCompileSettings = {};
 
 export type FuncSourceCompileResult = {
   includeInCommand: boolean;

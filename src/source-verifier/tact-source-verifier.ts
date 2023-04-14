@@ -1,10 +1,5 @@
 import { Cell } from "ton";
-import {
-  SourceVerifier,
-  SourceVerifyPayload,
-  CompileResult,
-  TactCliCompileSettings,
-} from "../types";
+import { SourceVerifier, SourceVerifyPayload, CompileResult } from "../types";
 import { PackageFileFormat } from "tact-1.0.0";
 import type { verify as VerifyFunction } from "tact-1.0.0";
 import path from "path";
@@ -31,14 +26,6 @@ export class TactSourceVerifier implements SourceVerifier {
       ).toString("utf8");
 
       const pkgParsed: PackageFileFormat = JSON.parse(pkg);
-      const _compilerSettings: TactCliCompileSettings =
-        payload.compilerSettings as TactCliCompileSettings;
-
-      if (pkgParsed.compiler.version !== _compilerSettings.tactVersion) {
-        throw new Error(
-          `Compiler version mismatch: ${pkgParsed.compiler.version} !== ${_compilerSettings.tactVersion}`,
-        );
-      }
 
       const compilerSettings = {
         tactVersion: pkgParsed.compiler.version,
