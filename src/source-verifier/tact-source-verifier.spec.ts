@@ -28,7 +28,39 @@ describe("TactSourceVerifier", () => {
       tmpDir: "",
     });
 
+    console.log(res.error);
+
     expect(res.result).toEqual("similar");
+  });
+
+  it("version mismatch", async function () {
+    const tactVerifier = new TactSourceVerifier({
+      writeFile: async (_path, content) => {},
+      readFile: async (path) => {
+        if (path === "echo.pkg") return Buffer.from(pkg, "base64");
+        throw new Error("Unknown path");
+      },
+      readdir: async () => [],
+    });
+
+    const res = await tactVerifier.verify({
+      compiler: "tact",
+      compilerSettings: { tactVersion: "1.0.1" },
+      knownContractAddress: "",
+      knownContractHash: "XhyDRMeBeZs7IK/pJ0XFWNjeKTx2g6n0+hGQ/9Ne2SA=",
+      senderAddress: "",
+      sources: [
+        {
+          path: "echo.pkg",
+        },
+      ],
+      tmpDir: "",
+    });
+
+    console.log(res.error);
+
+    expect(res.result).toEqual("unknown_error");
+    expect(res.error).toEqual("Error: Compiler version mismatch: 1.0.0 !== 1.0.1");
   });
 
   it("invalid file format", async function () {

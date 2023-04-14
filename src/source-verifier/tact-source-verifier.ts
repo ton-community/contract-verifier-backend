@@ -5,7 +5,8 @@ import {
   CompileResult,
   TactCliCompileSettings,
 } from "../types";
-import { PackageFileFormat, verify } from "@tact-lang/compiler";
+import { PackageFileFormat } from "tact-1.0.0";
+import type { verify as VerifyFunction } from "tact-1.0.0";
 import path from "path";
 
 export type FileSystem = {
@@ -30,6 +31,14 @@ export class TactSourceVerifier implements SourceVerifier {
       ).toString("utf8");
 
       const pkgParsed: PackageFileFormat = JSON.parse(pkg);
+      const _compilerSettings: TactCliCompileSettings =
+        payload.compilerSettings as TactCliCompileSettings;
+
+      if (pkgParsed.compiler.version !== _compilerSettings.tactVersion) {
+        throw new Error(
+          `Compiler version mismatch: ${pkgParsed.compiler.version} !== ${_compilerSettings.tactVersion}`,
+        );
+      }
 
       const compilerSettings = {
         tactVersion: pkgParsed.compiler.version,
@@ -37,6 +46,15 @@ export class TactSourceVerifier implements SourceVerifier {
       };
 
       const output: string[] = [];
+
+      const verify: typeof VerifyFunction = await import(`tact-${pkgParsed.compiler.version}`)
+        .then((m) => m.verify)
+        .catch((e) => {
+          output.push(
+            `Failed to load tact v${pkgParsed.compiler.version}. It probably doesn't exist on the server.`,
+          );
+          throw e;
+        });
 
       const v = await verify({
         pkg,
