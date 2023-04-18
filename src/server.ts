@@ -21,13 +21,13 @@ import { TactSourceVerifier, FileSystem } from "./source-verifier/tact-source-ve
 import { TonReaderClientImpl } from "./ton-reader-client";
 import { getLatestVerified } from "./latest-known-contracts";
 import { DeployController } from "./deploy-controller";
+import axios from "axios";
+import { getFuncVersions } from "./fetch-func-versions";
 
 const app = express();
 app.use(idMiddleware());
 app.use(cors());
 app.use(express.json());
-
-if (process.env.NODE_ENV === "production") checkPrerequisites();
 
 const limiter = rateLimit({
   windowMs: 5 * 60 * 1000, // 5 minutes
@@ -211,6 +211,10 @@ app.get("/hc", (req, res) => {
       }
     },
   );
+
+  await getFuncVersions();
+
+  if (process.env.NODE_ENV === "production") checkPrerequisites();
 
   app.get("/latestVerified", async (req, res) => {
     res.json(await getLatestVerified(process.env.VERIFIER_ID!, process.env.IPFS_PROVIDER!));

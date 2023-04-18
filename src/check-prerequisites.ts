@@ -1,7 +1,8 @@
 import fs from "fs";
 import path from "path";
-import { funcCompilers } from "./binaries";
-export function checkPrerequisites() {
+import { binaryPath } from "./binaries";
+import { getFuncVersions } from "./fetch-func-versions";
+export async function checkPrerequisites() {
   const missingEnvVars = [
     "VERIFIER_ID",
     "VERIFIER_REGISTRY",
@@ -18,8 +19,10 @@ export function checkPrerequisites() {
 
   if (missingEnvVars) throw new Error("Missing env vars: " + missingEnvVars);
 
-  const missingFiles = Object.values(funcCompilers)
-    .map((versionDir) => [
+  const funcVersions = await getFuncVersions();
+
+  const missingFiles = funcVersions!
+    .map((versionDir: string) => [
       path.join(versionDir, "func"),
       path.join(versionDir, "fift"),
       path.join(versionDir, "fiftlib", "Asm.fif"),

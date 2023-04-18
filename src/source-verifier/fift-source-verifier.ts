@@ -5,8 +5,8 @@ import { readFile, writeFile } from "fs/promises";
 import { CompileResult, SourceVerifier, SourceVerifyPayload } from "../types";
 import path from "path";
 import { Cell } from "ton";
-import { funcCompilers } from "../binaries";
 import { FuncCompilerVersion } from "@ton-community/contract-verifier-sdk";
+import { binaryPath } from "../binaries";
 
 export async function fiftToCodeCell(
   funcVersion: FuncCompilerVersion,
@@ -21,9 +21,9 @@ boc>B "${b64OutFile}" B>file`;
   const tmpB64Fift = path.join(tmpDir, `${fiftFile}.cell.tmp.fif`);
   await writeFile(tmpB64Fift, fiftCellSource);
 
-  const executable = path.join(process.cwd(), funcCompilers[funcVersion], "fift");
+  const executable = path.join(process.cwd(), binaryPath, funcVersion, "fift");
 
-  process.env.FIFTPATH = path.join(process.cwd(), funcCompilers[funcVersion], "fiftlib");
+  process.env.FIFTPATH = path.join(process.cwd(), binaryPath, funcVersion, "fiftlib");
 
   await execAsync(`${executable} -s ${tmpB64Fift}`);
 
