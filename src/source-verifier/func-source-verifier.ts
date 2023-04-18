@@ -9,9 +9,9 @@ import {
   FuncSourceToVerify,
 } from "../types";
 import path from "path";
-import { funcCompilers } from "../binaries";
 import { fiftToCodeCell } from "./fift-source-verifier";
 import { FuncCompilerVersion } from "@ton-community/contract-verifier-sdk";
+import { binaryPath } from "../binaries";
 
 function prepareFuncCommand(
   executable: string,
@@ -40,7 +40,7 @@ async function compileFuncToCodeHash(
   tmpDir: string,
 ) {
   const fiftOutFile = "output.fif";
-  const executable = path.join(process.cwd(), funcCompilers[funcVersion], "func");
+  const executable = path.join(process.cwd(), binaryPath, funcVersion, "func");
   const funcCmd = prepareFuncCommand(executable, funcArgs, fiftOutFile, commandLine);
 
   const { stderr } = await execAsync(funcCmd, { cwd: tmpDir });

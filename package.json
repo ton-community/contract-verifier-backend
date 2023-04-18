@@ -5,7 +5,7 @@
     "@orbs-network/ton-gateway": "^2.1.0",
     "tact-1.1.0-beta.27": "npm:@tact-lang/compiler@^1.1.0-beta.27",
     "tact-1.0.0": "npm:@tact-lang/compiler@^1.0.0",
-    "@ton-community/contract-verifier-sdk": "^1.1.0",
+    "@ton-community/contract-verifier-sdk": "^1.1.1",
     "async": "^3.2.4",
     "base64url": "^3.0.1",
     "cors": "^2.8.5",
