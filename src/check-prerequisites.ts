@@ -23,10 +23,10 @@ export async function checkPrerequisites() {
 
   const missingFiles = funcVersions!
     .map((versionDir: string) => [
-      path.join(versionDir, "func"),
-      path.join(versionDir, "fift"),
-      path.join(versionDir, "fiftlib", "Asm.fif"),
-      path.join(versionDir, "fiftlib", "Fift.fif"),
+      path.join(binaryPath, versionDir, "func"),
+      path.join(binaryPath, versionDir, "fift"),
+      path.join(binaryPath, versionDir, "fiftlib", "Asm.fif"),
+      path.join(binaryPath, versionDir, "fiftlib", "Fift.fif"),
     ])
     .flat()
     .filter((f) => !fs.existsSync(path.join(process.cwd(), f)))
