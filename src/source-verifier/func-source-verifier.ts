@@ -46,7 +46,7 @@ async function compileFuncToCodeHash(
 
   const { stderr } = await execAsyncWithTimeout(
     funcCmd,
-    parseInt(process.env.COMPILE_TIMEOUT ?? "0"),
+    parseInt(process.env.COMPILE_TIMEOUT ?? "1000"),
     {
       cwd: tmpDir,
     },

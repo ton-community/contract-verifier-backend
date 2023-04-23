@@ -52,7 +52,7 @@ export class TactSourceVerifier implements SourceVerifier {
             log: output.push,
           },
         }),
-        parseInt(process.env.COMPILE_TIMEOUT ?? "0"),
+        parseInt(process.env.COMPILE_TIMEOUT ?? "1000"),
       );
 
       if (!v.ok) {
