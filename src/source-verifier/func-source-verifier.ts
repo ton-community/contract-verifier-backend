@@ -1,3 +1,4 @@
+import { execAsyncWithTimeout } from "../utils";
 import { promisify } from "util";
 import { exec } from "child_process";
 const execAsync = promisify(exec);
@@ -43,7 +44,13 @@ async function compileFuncToCodeHash(
   const executable = path.join(process.cwd(), binaryPath, funcVersion, "func");
   const funcCmd = prepareFuncCommand(executable, funcArgs, fiftOutFile, commandLine);
 
-  const { stderr } = await execAsync(funcCmd, { cwd: tmpDir });
+  const { stderr } = await execAsyncWithTimeout(
+    funcCmd,
+    parseInt(process.env.COMPILE_TIMEOUT ?? "1000"),
+    {
+      cwd: tmpDir,
+    },
+  );
   if (stderr) {
     throw new Error(stderr);
   }
