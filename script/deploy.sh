@@ -7,8 +7,12 @@ if [ ! -f ".secret" ]; then
 fi
 source .secret
 
-values=("prod-testnet-1" "prod-1" "prod-2" "prod-3")
-# values=("prod-testnet-1")
+if [[ $1 == "testnet" ]]; then
+    values=("prod-testnet-1")
+    echo "Deploying to tesnet only!"
+else
+    values=("prod-testnet-1" "prod-1" "prod-2" "prod-3")
+fi
 
 for heroku_app in "${values[@]}"; do
   echo "Processing heroku_app: $heroku_app"
