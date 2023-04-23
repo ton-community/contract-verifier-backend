@@ -3,6 +3,7 @@ import { SourceVerifier, SourceVerifyPayload, CompileResult } from "../types";
 import { PackageFileFormat } from "tact-1.0.0";
 import type { verify as VerifyFunction } from "tact-1.0.0";
 import path from "path";
+import { timeoutPromise } from "../utils";
 
 export type FileSystem = {
   readFile: (path: string) => Promise<Buffer>;
@@ -43,13 +44,16 @@ export class TactSourceVerifier implements SourceVerifier {
           throw e;
         });
 
-      const v = await verify({
-        pkg,
-        logger: {
-          error: output.push,
-          log: output.push,
-        },
-      });
+      const v = await timeoutPromise(
+        verify({
+          pkg,
+          logger: {
+            error: output.push,
+            log: output.push,
+          },
+        }),
+        parseInt(process.env.COMPILE_TIMEOUT ?? "0"),
+      );
 
       if (!v.ok) {
         return {

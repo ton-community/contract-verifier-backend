@@ -56,3 +56,21 @@ export function execAsyncWithTimeout(
     );
   });
 }
+
+export function timeoutPromise<T>(promise: Promise<T>, timeout: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error("Timed out"));
+    }, timeout);
+
+    promise
+      .then((value) => {
+        clearTimeout(timer);
+        resolve(value);
+      })
+      .catch((err) => {
+        clearTimeout(timer);
+        reject(err);
+      });
+  });
+}
