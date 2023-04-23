@@ -9,3 +9,4 @@ resources/
 coverage/
 .secret
 secrets-config.json
+*.fc

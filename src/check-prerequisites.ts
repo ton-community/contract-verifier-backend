@@ -13,6 +13,7 @@ export async function checkPrerequisites() {
     "TACT_DEPLOYER_INFURA_ID",
     "TACT_DEPLOYER_INFURA_SECRET",
     "NETWORK",
+    "COMPILE_TIMEOUT",
   ]
     .filter((e) => !process.env[e])
     .join(" ");
