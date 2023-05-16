@@ -3,6 +3,8 @@
   "dependencies": {
     "@babel/preset-env": "^7.18.6",
     "@orbs-network/ton-gateway": "^2.1.0",
+    "tact-1.1.2": "npm:@tact-lang/compiler@1.1.2",
+    "tact-1.1.1": "npm:@tact-lang/compiler@1.1.1",
     "tact-1.1.0": "npm:@tact-lang/compiler@1.1.0",
     "tact-1.0.0": "npm:@tact-lang/compiler@1.0.0",
     "@ton-community/contract-verifier-sdk": "^1.1.1",
