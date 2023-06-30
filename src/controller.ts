@@ -8,8 +8,7 @@ import {
 import path from "path";
 import tweetnacl from "tweetnacl";
 import { VerifyResult, Compiler, SourceItem } from "./types";
-import { Address, beginCell, Cell } from "ton";
-import BN from "bn.js";
+import { Cell } from "ton";
 import { CodeStorageProvider } from "./ipfs-code-storage-provider";
 import { sha256, random64BitNumber, getNowHourRoundedDown } from "./utils";
 import { TonReaderClient } from "./ton-reader-client";
@@ -191,7 +190,7 @@ export class Controller {
       knownContractAddress: json.knownContractAddress,
       knownContractHash: json.hash,
       tmpDir: tmpDir,
-      senderAddress: senderAddress.toFriendly(),
+      senderAddress: senderAddress.toString(),
     };
 
     const compileResult = await compiler.verify(sourceToVerify);
@@ -200,20 +199,23 @@ export class Controller {
       throw new Error("Invalid compilation result");
     }
 
-    let mostDeepSigCell = cell.refs[1];
-
-    while (true) {
-      if (mostDeepSigCell.refs.length === 0) {
-        break;
-      }
-      mostDeepSigCell = mostDeepSigCell.refs[0];
-    }
-
-    const { sigCell } = signatureCell(cell.refs[0], this.keypair);
-    mostDeepSigCell.refs.push(sigCell);
+    const slice = cell.beginParse();
+    const msgToSign = slice.loadRef();
+    const { sigCell } = signatureCell(msgToSign, this.keypair);
+    let child = storeSign(slice.loadRef(), sigCell);
 
     return {
-      msgCell: cell.toBoc(),
+      msgCell: slice.asBuilder().storeRef(msgToSign).storeRef(child).asCell().toBoc(),
     };
+
+    function storeSign(node: Cell, sigCell: Cell): Cell {
+      const slice = node.beginParse();
+      if (slice.remainingRefs > 0) {
+        const child = storeSign(slice.loadRef(), msgToSign);
+        return slice.asBuilder().storeRef(child).asCell();
+      } else {
+        return slice.asBuilder().storeRef(sigCell).asCell();
+      }
+    }
   }
 }

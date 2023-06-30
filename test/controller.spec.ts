@@ -100,9 +100,9 @@ describe("Controller", () => {
       {
         privateKey: Buffer.from(serverKeypair.secretKey).toString("base64"),
         allowReverification: false,
-        sourcesRegistryAddress: randomAddress("sourcesReg").toFriendly(),
+        sourcesRegistryAddress: randomAddress("sourcesReg").toString(),
         verifierId: VERIFIER_ID,
-        verifierRegistryAddress: randomAddress("verifierReg").toFriendly(),
+        verifierRegistryAddress: randomAddress("verifierReg").toString(),
       },
       stubTonReaderClient,
     );
@@ -117,9 +117,9 @@ describe("Controller", () => {
       {
         privateKey: Buffer.from(server2Keypair.secretKey).toString("base64"),
         allowReverification: false,
-        sourcesRegistryAddress: randomAddress("sourcesReg").toFriendly(),
+        sourcesRegistryAddress: randomAddress("sourcesReg").toString(),
         verifierId: VERIFIER_ID,
-        verifierRegistryAddress: randomAddress("verifierReg").toFriendly(),
+        verifierRegistryAddress: randomAddress("verifierReg").toString(),
       },
       stubTonReaderClient,
     );
@@ -136,7 +136,7 @@ describe("Controller", () => {
       },
       knownContractAddress: "N/A",
       knownContractHash: "SomeHASH", // TODO this should be validated
-      senderAddress: randomAddress("sender").toFriendly(), // TODO should be validated to + in the original func
+      senderAddress: randomAddress("sender").toString(), // TODO should be validated to + in the original func
       sources: [],
       tmpDir: "N/A", // TODO
     });
@@ -154,20 +154,21 @@ describe("Controller", () => {
         },
         knownContractAddress: "N/A",
         knownContractHash: "SomeHASH", // TODO this should be validated
-        senderAddress: randomAddress("sender").toFriendly(), // TODO should be validated to + in the original func
+        senderAddress: randomAddress("sender").toString(), // TODO should be validated to + in the original func
         sources: [],
         tmpDir: "N/A", // TODO
       });
 
       const result = await controller.sign({ messageCell: msgCell!, tmpDir: "" });
 
-      const updatedMsgCell = Cell.fromBoc(result.msgCell)[0];
-      const sigCell = updatedMsgCell.refs[1];
-      const controllerSigCell = sigCell.refs[0].beginParse();
+      const updatedMsgSlice = Cell.fromBoc(result.msgCell)[0].beginParse();
+      const content = updatedMsgSlice.loadRef();
+      const sigCell = updatedMsgSlice.loadRef();
+      const controllerSigCell = sigCell.beginParse().loadRef().beginParse();
       controllerSigCell.skip(512);
-      const pubKey = controllerSigCell.readBuffer(32);
+      const pubKey = controllerSigCell.loadBuffer(32);
       expect(pubKey).toEqual(Buffer.from(serverKeypair.publicKey));
-      expect(updatedMsgCell.refs[0].hash()).toEqual(Cell.fromBoc(msgCell!)[0].refs[0].hash());
+      expect(content.hash()).toEqual(Cell.fromBoc(msgCell!)[0].asSlice().loadRef().hash());
     });
 
     describe("Invalid wrapper cell", () => {
@@ -452,8 +453,8 @@ describe("Controller", () => {
             ],
           });
 
-          const sigCell = makeSigCell(cellToSign, kp2);
-          sigCell.refs.push(makeSigCell(new Cell(), kp));
+          let sigCell = makeSigCell(cellToSign, kp2);
+          sigCell = sigCell.asBuilder().storeRef(makeSigCell(new Cell(), kp)).asCell();
 
           await expectSignThrow(sigCell, "Invalid signature");
           mock.mockRestore();
@@ -472,11 +473,11 @@ describe("Controller", () => {
             ],
           });
 
-          const sigCell = makeSigCell(cellToSign, kp2);
-          sigCell.refs.push(makeSigCell(cellToSign, kp));
-          sigCell.refs.push(makeSigCell(cellToSign, kp));
+          const sigBuilder = makeSigCell(cellToSign, kp2).asBuilder();
+          sigBuilder.storeRef(makeSigCell(cellToSign, kp));
+          sigBuilder.storeRef(makeSigCell(cellToSign, kp));
 
-          await expectSignThrow(sigCell, "Invalid signature cell");
+          await expectSignThrow(sigBuilder.asCell(), "Invalid signature cell");
           mock.mockRestore();
         });
       });
@@ -542,9 +543,9 @@ describe("Controller", () => {
           ],
         });
 
-        const sigCell = makeSigCell(cellToSign, kp);
+        let sigCell = makeSigCell(cellToSign, kp);
         const sigCell2 = makeSigCell(cellToSign, kp2);
-        sigCell.refs.push(sigCell2);
+        sigCell = sigCell.asBuilder().storeRef(sigCell2).asCell();
         await expectSignThrow(sigCell, "Too many signatures");
 
         mock.mockRestore();
@@ -562,9 +563,9 @@ describe("Controller", () => {
           ],
         });
 
-        const sigCell = makeSigCell(cellToSign, kp);
+        let sigCell = makeSigCell(cellToSign, kp);
         const sigCell2 = makeSigCell(cellToSign, kp);
-        sigCell.refs.push(sigCell2);
+        sigCell = sigCell.asBuilder().storeRef(sigCell2).asCell();
         await expectSignThrow(sigCell, "Duplicate signature");
 
         mock.mockRestore();

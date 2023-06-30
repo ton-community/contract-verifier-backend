@@ -1,11 +1,10 @@
 import dotenv from "dotenv";
-import { Address, Cell, TonClient } from "ton";
-import { getHttpEndpoint } from "@orbs-network/ton-gateway";
+import { Address } from "ton";
 import axios from "axios";
-import BN from "bn.js";
 import async from "async";
 import { sha256 } from "./utils";
 import { getTonClient } from "./ton-reader-client";
+import { toBigIntBE } from "bigint-buffer";
 
 dotenv.config({ path: ".env.local" });
 dotenv.config({ path: ".env" });
@@ -52,25 +51,23 @@ async function update(verifierIdSha256: Buffer, ipfsProvider: string) {
         }
 
         try {
-          const { stack: sourceItemDataStack } = await tc.callGetMethod(
+          const { stack: sourceItemDataStack } = await tc.runMethod(
             Address.parse(dest),
             "get_source_item_data",
           );
 
-          const verifierId = new BN(sourceItemDataStack[0][1].replace("0x", ""), "hex");
+          const verifierId = sourceItemDataStack.readBigNumber();
 
-          if (!verifierId.toBuffer().equals(verifierIdSha256)) {
+          if (verifierId !== toBigIntBE(verifierIdSha256)) {
             callback();
             return;
           }
+          sourceItemDataStack.skip(2);
+          const contentCell = sourceItemDataStack.readCell().beginParse();
 
-          const contentCell = Cell.fromBoc(
-            Buffer.from(sourceItemDataStack[3][1].bytes, "base64"),
-          )[0].beginParse();
-
-          const version = contentCell.readUintNumber(8);
+          const version = contentCell.loadUint(8);
           if (version !== 1) throw new Error("Unsupported version");
-          const ipfsLink = contentCell.readRemainingBytes().toString();
+          const ipfsLink = contentCell.loadStringTail();
 
           let ipfsData;
           try {
