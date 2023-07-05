@@ -5,6 +5,7 @@ import async from "async";
 import { sha256 } from "./utils";
 import { getTonClient } from "./ton-reader-client";
 import { toBigIntBE } from "bigint-buffer";
+import { SourceItem } from "./wrappers/source-item";
 
 dotenv.config({ path: ".env.local" });
 dotenv.config({ path: ".env" });
@@ -51,19 +52,14 @@ async function update(verifierIdSha256: Buffer, ipfsProvider: string) {
         }
 
         try {
-          const { stack: sourceItemDataStack } = await tc.runMethod(
-            Address.parse(dest),
-            "get_source_item_data",
-          );
-
-          const verifierId = sourceItemDataStack.readBigNumber();
+          const sourceItemContract = tc.open(SourceItem.createFromAddress(Address.parse(dest)));
+          const { verifierId, data } = await sourceItemContract.getData();
 
           if (verifierId !== toBigIntBE(verifierIdSha256)) {
             callback();
             return;
           }
-          sourceItemDataStack.skip(2);
-          const contentCell = sourceItemDataStack.readCell().beginParse();
+          const contentCell = data!.beginParse();
 
           const version = contentCell.loadUint(8);
           if (version !== 1) throw new Error("Unsupported version");

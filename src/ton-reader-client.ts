@@ -4,6 +4,7 @@ import { toBigIntBE, toBufferBE } from "bigint-buffer";
 import { sha256 } from "./utils";
 import { getHttpEndpoint } from "@orbs-network/ton-gateway";
 import { ContractVerifier } from "@ton-community/contract-verifier-sdk";
+import { VerifierRegistry } from "./wrappers/verifier-registry";
 
 export type VerifierConfig = {
   verifiers: Buffer[];
@@ -41,11 +42,11 @@ export class TonReaderClientImpl implements TonReaderClient {
     verifierRegistryAddress: string,
   ): Promise<VerifierConfig> {
     const tc = await getTonClient();
-    const res = await tc.runMethod(Address.parse(verifierRegistryAddress), "get_verifier", [
-      { type: "int", value: toBigIntBE(sha256(verifierId)) },
-    ]);
-    res.stack.pop();
-    const verifierConfig = res.stack.readCell().beginParse();
+    const verifierRegstryContract = tc.open(
+      VerifierRegistry.createFromAddress(Address.parse(verifierRegistryAddress)),
+    );
+    const res = await verifierRegstryContract.getVerifier(toBigIntBE(sha256(verifierId)));
+    const verifierConfig = res.settings!.beginParse();
 
     const quorum = verifierConfig.loadUint(8);
     const verifiers = Array.from(
