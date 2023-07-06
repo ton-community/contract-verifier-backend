@@ -211,8 +211,17 @@ export class Controller {
     function storeSign(node: Cell, sigCell: Cell): Cell {
       const slice = node.beginParse();
       if (slice.remainingRefs > 0) {
-        const child = storeSign(slice.loadRef(), msgToSign);
-        return slice.asBuilder().storeRef(child).asCell();
+        const child = storeSign(slice.loadRef(), sigCell);
+        const refs = [];
+
+        while (slice.remainingRefs > 0) {
+          refs.push(slice.loadRef());
+        }
+
+        const builder = slice.asBuilder().storeRef(child);
+        refs.forEach((ref) => builder.storeRef(ref));
+
+        return builder.asCell();
       } else {
         return slice.asBuilder().storeRef(sigCell).asCell();
       }
