@@ -202,29 +202,24 @@ export class Controller {
     const slice = cell.beginParse();
     const msgToSign = slice.loadRef();
     const { sigCell } = signatureCell(msgToSign, this.keypair);
-    let child = storeSign(slice.loadRef(), sigCell);
+    let updateSigCell = addSignatureCell(slice.loadRef(), sigCell);
 
     return {
-      msgCell: slice.asBuilder().storeRef(msgToSign).storeRef(child).asCell().toBoc(),
+      msgCell: slice.asBuilder().storeRef(msgToSign).storeRef(updateSigCell).asCell().toBoc(),
     };
-
-    function storeSign(node: Cell, sigCell: Cell): Cell {
-      const slice = node.beginParse();
-      if (slice.remainingRefs > 0) {
-        const child = storeSign(slice.loadRef(), sigCell);
-        const refs = [];
-
-        while (slice.remainingRefs > 0) {
-          refs.push(slice.loadRef());
-        }
-
-        const builder = slice.asBuilder().storeRef(child);
-        refs.forEach((ref) => builder.storeRef(ref));
-
-        return builder.asCell();
-      } else {
-        return slice.asBuilder().storeRef(sigCell).asCell();
-      }
-    }
   }
+}
+
+function addSignatureCell(node: Cell, sigCell: Cell): Cell {
+  const slice = node.beginParse();
+  if (slice.remainingRefs > 0) {
+    const child = slice.loadRef();
+    if (slice.remainingRefs > 0) {
+      throw new Error("Each signature cell should have at most one ref to another sig cell");
+    }
+
+    return slice.asBuilder().storeRef(addSignatureCell(child, sigCell)).asCell();
+  }
+
+  return slice.asBuilder().storeRef(sigCell).asCell();
 }
