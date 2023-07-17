@@ -20,11 +20,10 @@ export class TactSourceVerifier implements SourceVerifier {
 
   async verify(payload: SourceVerifyPayload): Promise<CompileResult> {
     try {
-      const pkg = (
-        await this.fileSystem.readFile(
-          path.join(payload.tmpDir, payload.sources.find((s) => s.path.endsWith(".pkg"))!.path),
-        )
-      ).toString("utf8");
+      const pkgFilePath = payload.sources.find((s) => s.path.endsWith(".pkg"))!.path;
+      const pkg = (await this.fileSystem.readFile(path.join(payload.tmpDir, pkgFilePath))).toString(
+        "utf8",
+      );
 
       const pkgParsed: PackageFileFormat = JSON.parse(pkg);
 
@@ -65,24 +64,30 @@ export class TactSourceVerifier implements SourceVerifier {
         };
       }
 
-      const sources = (
-        await Promise.all(
-          Object.entries(v.files)
-            .filter(([filename]) => !filename.match(/\.(fif|boc|ts|md)/))
-            .map(async ([filename, contentB64]) => {
-              const writePath = path.join(payload.tmpDir, filename);
-              let content = Buffer.from(contentB64, "base64").toString("utf-8");
-              if (filename.match(/\.(pkg|abi)/)) {
-                content = JSON.stringify(JSON.parse(content), null, 3);
-              }
-              await this.fileSystem.writeFile(writePath, content);
-              return { filename };
-            }),
-        )
-      ).sort(
-        ({ filename: filenameA }, { filename: filenameB }) =>
-          (filenameA.endsWith(".tact") ? 1 : 0) - (filenameB.endsWith(".tact") ? 1 : 0),
+      const sources = await Promise.all(
+        Object.entries(v.files)
+          .filter(([filename]) => !filename.match(/\.(fif|boc|ts|md|pkg)/))
+          .map(async ([filename, contentB64]) => {
+            const writePath = path.join(payload.tmpDir, filename);
+            let content = Buffer.from(contentB64, "base64").toString("utf-8");
+            if (filename.match(/\.(abi)/)) {
+              content = JSON.stringify(JSON.parse(content), null, 3);
+            }
+            await this.fileSystem.writeFile(writePath, content);
+            return { filename };
+          }),
       );
+
+      /*
+      Add the original pkg file here. 
+      The reason for this is because in a verify flow what could happen is this:
+      1. User supplies "X.pkg" as source of truth
+      2. Tact source verifier on BE1 compiles and generates X.pkg, but also Y.pkg (this is possible due to the nature of tact compiler, which will generate a pkg file per contract)
+      3. Tact source verifier on BE2, trying to verify BE1 result, now has ambiguity on which pkg file to use
+
+      Therefore we only add the original pkg file
+      */
+      sources.push({ filename: pkgFilePath });
 
       const compiledHash = Cell.fromBoc(Buffer.from(v.package.code, "base64"))[0]
         .hash()
@@ -93,7 +98,10 @@ export class TactSourceVerifier implements SourceVerifier {
         error: null,
         hash: compiledHash,
         result: compiledHash === payload.knownContractHash ? "similar" : "not_similar",
-        sources,
+        sources: sources.sort(
+          ({ filename: filenameA }, { filename: filenameB }) =>
+            (filenameA.endsWith(".tact") ? 1 : 0) - (filenameB.endsWith(".tact") ? 1 : 0),
+        ),
       };
     } catch (e) {
       return {
