@@ -1,6 +1,5 @@
 import { exec, ExecException, ExecOptions } from "child_process";
 import crypto from "crypto";
-import BN from "bn.js";
 
 export function sha256(s: string): Buffer {
   return crypto.createHash("sha256").update(s).digest();
@@ -9,7 +8,7 @@ export function sha256(s: string): Buffer {
 export function random64BitNumber() {
   const randomBool = () => (Math.random() > 0.5 ? 1 : 0);
   const random64BitNumber = Array.from({ length: 64 }, randomBool).join("");
-  return new BN(random64BitNumber, 2);
+  return BigInt("0b" + random64BitNumber);
 }
 
 export function getNowHourRoundedDown() {

@@ -1,10 +1,10 @@
 import { Address, beginCell, Cell } from "ton";
-import BN from "bn.js";
 import tweetnacl from "tweetnacl";
+import { toBigIntBE } from "bigint-buffer";
 export const DEPLOY_SOURCE_OP = 1002;
 
 export function deploySource(
-  queryId: BN,
+  queryId: bigint,
   codeCellHash: string,
   ipfsLink: string,
   verifierId: Buffer,
@@ -13,7 +13,7 @@ export function deploySource(
     .storeUint(DEPLOY_SOURCE_OP, 32)
     .storeUint(queryId, 64)
     .storeBuffer(verifierId)
-    .storeUint(new BN(Buffer.from(codeCellHash, "base64")), 256)
+    .storeUint(toBigIntBE(Buffer.from(codeCellHash, "base64")), 256)
     .storeRef(
       // Source item content cell
       beginCell().storeUint(1, 8).storeBuffer(Buffer.from(ipfsLink)).endCell(),
@@ -24,7 +24,7 @@ export function deploySource(
 export const FORWARD_MESSAGE_OP = 0x75217758;
 
 export function verifierRegistryForwardMessage(
-  queryId: BN,
+  queryId: bigint,
   msgToSign: Cell,
   sigCell: Cell,
 ): Buffer | undefined {
@@ -39,7 +39,7 @@ export function verifierRegistryForwardMessage(
 
 export function cellToSign(
   senderAddress: string,
-  queryId: BN,
+  queryId: bigint,
   codeCellHash: string,
   ipfsLink: string,
   sourcesRegistry: string,

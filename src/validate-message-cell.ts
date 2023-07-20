@@ -1,4 +1,4 @@
-import { Cell, Slice } from "ton";
+import { Address, Cell, Slice } from "ton";
 import tweetnacl from "tweetnacl";
 import { DEPLOY_SOURCE_OP, FORWARD_MESSAGE_OP } from "./cell-builders";
 import { VerifierConfig } from "./ton-reader-client";
@@ -29,17 +29,17 @@ function validateSignatureCell(
       throw new Error("Too many signatures");
     }
 
-    if (currRef.remaining !== 512 + 256) {
+    if (currRef.remainingBits !== 512 + 256) {
       throw new Error("Invalid signature cell");
     }
 
-    const sig = currRef.readBuffer(512 / 8);
+    const sig = currRef.loadBuffer(512 / 8);
 
     if (sigs[sig.toString("base64")] === true) {
       throw new Error("Duplicate signature");
     }
 
-    const pubKey = currRef.readBuffer(256 / 8);
+    const pubKey = currRef.loadBuffer(256 / 8);
 
     if (pubKey.equals(keypair.publicKey)) {
       throw new Error("Invalid signature (signed by self)");
@@ -52,7 +52,7 @@ function validateSignatureCell(
     }
 
     if (currRef.remainingRefs === 1) {
-      currRef = currRef.readRef();
+      currRef = currRef.loadRef().asSlice();
     } else if (currRef.remainingRefs === 0) {
       currRef = null;
     } else {
@@ -64,30 +64,30 @@ function validateSignatureCell(
 }
 
 function validateSourcesRegistryMessageCell(slice: Slice, verifierId: Buffer) {
-  if (slice.remaining !== 32 + 64 + 256 + 256 || slice.remainingRefs !== 1) {
+  if (slice.remainingBits !== 32 + 64 + 256 + 256 || slice.remainingRefs !== 1) {
     throw new Error("Invalid sources registry body cell");
   }
 
-  if (slice.readUint(32).toNumber() !== DEPLOY_SOURCE_OP) {
+  if (slice.loadUint(32) !== DEPLOY_SOURCE_OP) {
     throw new Error("Invalid deploy source op");
   }
 
   slice.skip(64);
 
-  const verifierInMsg = slice.readBuffer(32);
+  const verifierInMsg = slice.loadBuffer(32);
 
   if (!verifierInMsg.equals(verifierId)) {
     throw new Error("Invalid verifier id");
   }
 
-  const codeCellHash = slice.readBuffer(32).toString("base64");
+  const codeCellHash = slice.loadBuffer(32).toString("base64");
 
-  const contentCell = slice.readRef();
-  if (contentCell.readUint(8).toNumber() !== 1) {
+  const contentCell = slice.loadRef().asSlice();
+  if (contentCell.loadUint(8) !== 1) {
     throw new Error("Unsupported version of source item content cell");
   }
 
-  const ipfsPointer = contentCell.readRemainingBytes().toString("utf8");
+  const ipfsPointer = contentCell.loadBuffer(contentCell.remainingBits / 8).toString("utf-8");
   return {
     codeCellHash,
     ipfsPointer,
@@ -99,17 +99,17 @@ function validateVerifierRegistryBodyCell(
   verifierId: Buffer,
   sourcesRegistryAddress: string,
 ) {
-  if (slice.remaining !== 256 + 32 + 267 + 267 || slice.remainingRefs !== 1) {
+  if (slice.remainingBits !== 256 + 32 + 267 + 267 || slice.remainingRefs !== 1) {
     throw new Error("Invalid verifier body cell");
   }
 
-  const verifierInMsg = slice.readBuffer(32);
+  const verifierInMsg = slice.loadBuffer(32);
 
   if (!verifierInMsg.equals(verifierId)) {
     throw new Error("Invalid verifier id");
   }
 
-  const date = slice.readUint(32).toNumber();
+  const date = slice.loadUint(32);
 
   const dateInMessage = new Date(date * 1000);
 
@@ -117,17 +117,17 @@ function validateVerifierRegistryBodyCell(
     throw new Error("Message is expired");
   }
 
-  const senderAddress = slice.readAddress()!;
-  const sourcesRegInMsg = slice.readAddress()!;
+  const senderAddress = slice.loadAddress()!;
+  const sourcesRegInMsg = slice.loadAddress()!;
 
-  if (sourcesRegInMsg.toFriendly() !== sourcesRegistryAddress) {
+  if (sourcesRegInMsg.toString() !== sourcesRegistryAddress) {
     throw new Error("Invalid sources registry address");
   }
 
   return {
     senderAddress,
     date,
-    ...validateSourcesRegistryMessageCell(slice.readRef(), verifierId),
+    ...validateSourcesRegistryMessageCell(slice.loadRef().asSlice(), verifierId),
   };
 }
 
@@ -139,26 +139,25 @@ export function validateMessageCell(
   verifierConfig: VerifierConfig,
 ) {
   const slice = cell.beginParse();
-  if (slice.remaining !== 32 + 64 || slice.remainingRefs !== 2) {
+  if (slice.remainingBits !== 32 + 64 || slice.remainingRefs !== 2) {
     throw new Error("Invalid cell");
   }
 
   // Validate message cell
-  if (slice.readUint(32).toNumber() !== FORWARD_MESSAGE_OP) {
+  if (slice.loadUint(32) !== FORWARD_MESSAGE_OP) {
     throw new Error("Invalid operation");
   }
 
-  const queryId = slice.readUint(64);
+  const queryId = slice.loadUint(64);
 
-  const signedSlice = slice.readRef();
-  const signedCell = signedSlice.toCell();
+  const signedCell = slice.loadRef();
 
   const { ipfsPointer, codeCellHash, senderAddress, date } = validateVerifierRegistryBodyCell(
-    signedSlice,
+    signedCell.asSlice(),
     verifierId,
     sourcesRegistryAddress,
   );
-  validateSignatureCell(slice.readRef(), signedCell, keypair, verifierConfig);
+  validateSignatureCell(slice.loadRef().asSlice(), signedCell, keypair, verifierConfig);
 
   return {
     ipfsPointer,

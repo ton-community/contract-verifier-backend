@@ -4,7 +4,7 @@ import { CodeStorageProvider, FileUploadSpec } from "../src/ipfs-code-storage-pr
 import { of as ipfsHash } from "ipfs-only-hash";
 import tweetnacl from "tweetnacl";
 import { CompileResult, SourceVerifier, SourceVerifyPayload } from "../src/types";
-import { beginCell, Cell, Address } from "ton";
+import { beginCell, Cell, Address, Slice } from "ton";
 import { TonReaderClient, VerifierConfig } from "../src/ton-reader-client";
 import { sha256 } from "../src/utils";
 import Prando from "prando";
@@ -64,6 +64,7 @@ class StubSourceVerifier implements SourceVerifier {
 
 const serverKeypair = tweetnacl.sign.keyPair();
 const server2Keypair = tweetnacl.sign.keyPair();
+const server3Keypair = tweetnacl.sign.keyPair();
 
 class StubTonReaderClient implements TonReaderClient {
   async getVerifierConfig(
@@ -71,8 +72,12 @@ class StubTonReaderClient implements TonReaderClient {
     verifierRegistryAddress: string,
   ): Promise<VerifierConfig> {
     return {
-      quorum: 2,
-      verifiers: [Buffer.from(serverKeypair.publicKey), Buffer.from(server2Keypair.publicKey)],
+      quorum: 3,
+      verifiers: [
+        Buffer.from(serverKeypair.publicKey),
+        Buffer.from(server2Keypair.publicKey),
+        Buffer.from(server3Keypair.publicKey),
+      ],
     };
   }
   async isProofDeployed(codeCellHash: string, verifierId: string): Promise<boolean | undefined> {
@@ -80,49 +85,40 @@ class StubTonReaderClient implements TonReaderClient {
   }
 }
 
+const VERIFIER_ID = "some verifier";
+
 const stubTonReaderClient = new StubTonReaderClient();
 const stubSourceVerifier = new StubSourceVerifier();
 const stubCodeStorageProvider = new StubCodeStorageProvider();
 
+function makeController(keypair: tweetnacl.SignKeyPair): Controller {
+  return new Controller(
+    stubCodeStorageProvider,
+    {
+      func: stubSourceVerifier,
+      fift: stubSourceVerifier,
+      tact: stubSourceVerifier,
+    },
+    {
+      privateKey: Buffer.from(keypair.secretKey).toString("base64"),
+      allowReverification: false,
+      sourcesRegistryAddress: randomAddress("sourcesReg").toString(),
+      verifierId: VERIFIER_ID,
+      verifierRegistryAddress: randomAddress("verifierReg").toString(),
+    },
+    stubTonReaderClient,
+  );
+}
+
 describe("Controller", () => {
   let controller: Controller;
   let controller2: Controller;
-  const VERIFIER_ID = "some verifier";
+  let controller3: Controller;
 
   beforeEach(() => {
-    controller = new Controller(
-      stubCodeStorageProvider,
-      {
-        func: stubSourceVerifier,
-        fift: stubSourceVerifier,
-        tact: stubSourceVerifier,
-      },
-      {
-        privateKey: Buffer.from(serverKeypair.secretKey).toString("base64"),
-        allowReverification: false,
-        sourcesRegistryAddress: randomAddress("sourcesReg").toFriendly(),
-        verifierId: VERIFIER_ID,
-        verifierRegistryAddress: randomAddress("verifierReg").toFriendly(),
-      },
-      stubTonReaderClient,
-    );
-
-    controller2 = new Controller(
-      stubCodeStorageProvider,
-      {
-        func: stubSourceVerifier,
-        fift: stubSourceVerifier,
-        tact: stubSourceVerifier,
-      },
-      {
-        privateKey: Buffer.from(server2Keypair.secretKey).toString("base64"),
-        allowReverification: false,
-        sourcesRegistryAddress: randomAddress("sourcesReg").toFriendly(),
-        verifierId: VERIFIER_ID,
-        verifierRegistryAddress: randomAddress("verifierReg").toFriendly(),
-      },
-      stubTonReaderClient,
-    );
+    controller = makeController(serverKeypair);
+    controller2 = makeController(server2Keypair);
+    controller3 = makeController(server3Keypair);
 
     stubCodeStorageProvider.clear();
   });
@@ -136,7 +132,7 @@ describe("Controller", () => {
       },
       knownContractAddress: "N/A",
       knownContractHash: "SomeHASH", // TODO this should be validated
-      senderAddress: randomAddress("sender").toFriendly(), // TODO should be validated to + in the original func
+      senderAddress: randomAddress("sender").toString(), // TODO should be validated to + in the original func
       sources: [],
       tmpDir: "N/A", // TODO
     });
@@ -146,7 +142,8 @@ describe("Controller", () => {
 
   describe("Sign", () => {
     it("Signs a source", async () => {
-      const { msgCell } = await controller2.addSource({
+      // First server signs
+      const { msgCell } = await controller.addSource({
         compiler: "func",
         compilerSettings: {
           funcVersion: "0.2.0",
@@ -154,20 +151,66 @@ describe("Controller", () => {
         },
         knownContractAddress: "N/A",
         knownContractHash: "SomeHASH", // TODO this should be validated
-        senderAddress: randomAddress("sender").toFriendly(), // TODO should be validated to + in the original func
+        senderAddress: randomAddress("sender").toString(), // TODO should be validated to + in the original func
         sources: [],
         tmpDir: "N/A", // TODO
       });
 
-      const result = await controller.sign({ messageCell: msgCell!, tmpDir: "" });
+      // Second server adds signature
+      const afterController2SigResult = await controller2.sign({
+        messageCell: msgCell!,
+        tmpDir: "",
+      });
+      const afterController2SigSlice = Cell.fromBoc(
+        afterController2SigResult.msgCell,
+      )[0].beginParse();
 
-      const updatedMsgCell = Cell.fromBoc(result.msgCell)[0];
-      const sigCell = updatedMsgCell.refs[1];
-      const controllerSigCell = sigCell.refs[0].beginParse();
-      controllerSigCell.skip(512);
-      const pubKey = controllerSigCell.readBuffer(32);
-      expect(pubKey).toEqual(Buffer.from(serverKeypair.publicKey));
-      expect(updatedMsgCell.refs[0].hash()).toEqual(Cell.fromBoc(msgCell!)[0].refs[0].hash());
+      // Ensure message itself is intact
+      const content = afterController2SigSlice.loadRef();
+      expect(content.hash()).toEqual(Cell.fromBoc(msgCell!)[0].asSlice().loadRef().hash());
+
+      // Ensure signature 1 remains included
+      const server1SigSlice = afterController2SigSlice.loadRef().beginParse();
+      expect(server1SigSlice.skip(512).loadBuffer(32)).toEqual(
+        Buffer.from(serverKeypair.publicKey),
+      );
+
+      // Ensure signature 2 was added
+      const server2SigSlice = server1SigSlice.loadRef().beginParse();
+      expect(server2SigSlice.skip(512).loadBuffer(32)).toEqual(
+        Buffer.from(server2Keypair.publicKey),
+      );
+
+      // Third server adds signature
+      const afterController3SigResult = await controller3.sign({
+        messageCell: afterController2SigResult.msgCell,
+        tmpDir: "",
+      });
+      const afterController3SigSlice = Cell.fromBoc(
+        afterController3SigResult.msgCell,
+      )[0].beginParse();
+
+      // Ensure message itself is intact
+      const content2 = afterController3SigSlice.loadRef();
+      expect(content2.hash()).toEqual(Cell.fromBoc(msgCell!)[0].asSlice().loadRef().hash());
+
+      // Ensure signature 1 remains included
+      const server1SigSlice2 = afterController3SigSlice.loadRef().beginParse();
+      expect(server1SigSlice2.skip(512).loadBuffer(32)).toEqual(
+        Buffer.from(serverKeypair.publicKey),
+      );
+
+      // Ensure signature 2 remains included
+      const server2SigSlice2 = server1SigSlice2.loadRef().beginParse();
+      expect(server2SigSlice2.skip(512).loadBuffer(32)).toEqual(
+        Buffer.from(server2Keypair.publicKey),
+      );
+
+      // Ensure signature 3 was added
+      const server3SigSlice = server2SigSlice2.loadRef().beginParse();
+      expect(server3SigSlice.skip(512).loadBuffer(32)).toEqual(
+        Buffer.from(server3Keypair.publicKey),
+      );
     });
 
     describe("Invalid wrapper cell", () => {
@@ -452,8 +495,8 @@ describe("Controller", () => {
             ],
           });
 
-          const sigCell = makeSigCell(cellToSign, kp2);
-          sigCell.refs.push(makeSigCell(new Cell(), kp));
+          let sigCell = makeSigCell(cellToSign, kp2);
+          sigCell = sigCell.asBuilder().storeRef(makeSigCell(new Cell(), kp)).asCell();
 
           await expectSignThrow(sigCell, "Invalid signature");
           mock.mockRestore();
@@ -472,11 +515,11 @@ describe("Controller", () => {
             ],
           });
 
-          const sigCell = makeSigCell(cellToSign, kp2);
-          sigCell.refs.push(makeSigCell(cellToSign, kp));
-          sigCell.refs.push(makeSigCell(cellToSign, kp));
+          const sigBuilder = makeSigCell(cellToSign, kp2).asBuilder();
+          sigBuilder.storeRef(makeSigCell(cellToSign, kp));
+          sigBuilder.storeRef(makeSigCell(cellToSign, kp));
 
-          await expectSignThrow(sigCell, "Invalid signature cell");
+          await expectSignThrow(sigBuilder.asCell(), "Invalid signature cell");
           mock.mockRestore();
         });
       });
@@ -542,9 +585,9 @@ describe("Controller", () => {
           ],
         });
 
-        const sigCell = makeSigCell(cellToSign, kp);
+        let sigCell = makeSigCell(cellToSign, kp);
         const sigCell2 = makeSigCell(cellToSign, kp2);
-        sigCell.refs.push(sigCell2);
+        sigCell = sigCell.asBuilder().storeRef(sigCell2).asCell();
         await expectSignThrow(sigCell, "Too many signatures");
 
         mock.mockRestore();
@@ -562,9 +605,9 @@ describe("Controller", () => {
           ],
         });
 
-        const sigCell = makeSigCell(cellToSign, kp);
+        let sigCell = makeSigCell(cellToSign, kp);
         const sigCell2 = makeSigCell(cellToSign, kp);
-        sigCell.refs.push(sigCell2);
+        sigCell = sigCell.asBuilder().storeRef(sigCell2).asCell();
         await expectSignThrow(sigCell, "Duplicate signature");
 
         mock.mockRestore();
