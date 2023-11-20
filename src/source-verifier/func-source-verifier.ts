@@ -20,7 +20,7 @@ function prepareFuncCommand(
   fiftOutFile: string,
   commandLine: string,
 ) {
-  if (/[;>&]/.test(commandLine)) {
+  if (/[;>\&`\|\$\(\)\[\]\{\}'"\\\#]/.test(commandLine)) {
     throw new Error("Unallowed special characters in command line");
   }
   const getPath = (_path: string) => _path;
