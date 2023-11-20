@@ -10,3 +10,4 @@ coverage/
 .secret
 secrets-config.json
 *.fc
+release/
