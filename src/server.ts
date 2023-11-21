@@ -49,11 +49,7 @@ app.use(async (req, res, next) => {
 const sourcesUpload = multer({
   storage: multer.diskStorage({
     destination: async (req, file, callback) => {
-      const _path = path.join(
-        TMP_DIR,
-        req.id,
-        file.fieldname.match(/\//) ? file.fieldname.split("/")[0] : "",
-      );
+      const _path = path.join(TMP_DIR, req.id, ...file.fieldname.split("/").slice(0, -1));
 
       await mkdirp(_path);
       callback(null, _path);
