@@ -2,7 +2,7 @@ import { Address, Cell, Dictionary, TonClient } from "ton";
 import { DictionaryValue } from "ton-core";
 import { toBigIntBE, toBufferBE } from "bigint-buffer";
 import { sha256 } from "./utils";
-import { getHttpEndpoint } from "@orbs-network/ton-gateway";
+import { getHttpEndpoint } from "@orbs-network/ton-access";
 import { ContractVerifier } from "@ton-community/contract-verifier-sdk";
 import { VerifierRegistry } from "./wrappers/verifier-registry";
 

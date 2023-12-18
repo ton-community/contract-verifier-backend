@@ -1,7 +1,7 @@
 import { Cell } from "ton";
 import { SourceVerifier, SourceVerifyPayload, CompileResult } from "../types";
-import { PackageFileFormat } from "tact-1.1.0";
-import type { verify as VerifyFunction } from "tact-1.1.0";
+import { PackageFileFormat } from "tact-1.1.4";
+import type { verify as VerifyFunction } from "tact-1.1.4";
 import path from "path";
 import { timeoutPromise } from "../utils";
 
@@ -51,10 +51,11 @@ export class TactSourceVerifier implements SourceVerifier {
             log: output.push,
           },
         }),
-        parseInt(process.env.COMPILE_TIMEOUT ?? "1000"),
+        parseInt(process.env.COMPILE_TIMEOUT ?? "3000"),
       );
 
       if (!v.ok) {
+        console.error("Failed to compile tact package", output.join("\n"));
         return {
           compilerSettings,
           error: [v.error, ...output].join("\n"),
