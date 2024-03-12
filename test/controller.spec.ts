@@ -104,7 +104,6 @@ function makeController(keypair: tweetnacl.SignKeyPair): Controller {
       allowReverification: false,
       sourcesRegistryAddress: randomAddress("sourcesReg").toString(),
       verifierId: VERIFIER_ID,
-      verifierRegistryAddress: randomAddress("verifierReg").toString(),
     },
     stubTonReaderClient,
   );
