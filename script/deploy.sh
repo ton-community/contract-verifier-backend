@@ -1,17 +1,11 @@
 #!/bin/bash
 set -e
 
-if [ ! -f ".secret" ]; then
-  echo >&2 "Error: .secret does not exist."
-  exit 1
-fi
-source .secret
-
 if [[ $1 == "testnet" ]]; then
-    values=("prod-testnet-1")
-    echo "Deploying to tesnet only!"
+  values=("prod-testnet-1")
+  echo "Deploying to tesnet only!"
 else
-    values=("prod-testnet-1" "prod-1" "prod-2" "prod-3")
+  values=("prod-testnet-1" "prod-1" "prod-2" "prod-3")
 fi
 
 for heroku_app in "${values[@]}"; do

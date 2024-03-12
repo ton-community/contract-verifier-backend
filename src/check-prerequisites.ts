@@ -5,7 +5,6 @@ import { getFuncVersions } from "./fetch-func-versions";
 export async function checkPrerequisites() {
   const missingEnvVars = [
     "VERIFIER_ID",
-    "VERIFIER_REGISTRY",
     "SOURCES_REGISTRY",
     "INFURA_ID",
     "INFURA_SECRET",

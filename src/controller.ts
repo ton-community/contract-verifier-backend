@@ -29,7 +29,6 @@ interface ControllerConfig {
   privateKey: string;
   sourcesRegistryAddress: string;
   allowReverification: boolean;
-  verifierRegistryAddress: string;
 }
 
 export class Controller {
@@ -53,6 +52,7 @@ export class Controller {
     this.keypair = tweetnacl.sign.keyPair.fromSecretKey(
       Buffer.from(this.config.privateKey, "base64"),
     );
+
     this.tonReaderClient = tonReaderClient;
   }
 
@@ -142,7 +142,7 @@ export class Controller {
 
     const verifierConfig = await this.tonReaderClient.getVerifierConfig(
       this.config.verifierId,
-      this.config.verifierRegistryAddress,
+      this.config.sourcesRegistryAddress,
     );
 
     const { ipfsPointer, codeCellHash, senderAddress, queryId } = validateMessageCell(
