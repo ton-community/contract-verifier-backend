@@ -4,6 +4,7 @@ import { PackageFileFormat } from "tact-1.1.5";
 import type { verify as VerifyFunction } from "tact-1.1.5";
 import path from "path";
 import { timeoutPromise } from "../utils";
+import { getSupportedVersions } from "../fetch-compiler-versions";
 
 export type FileSystem = {
   readFile: (path: string) => Promise<Buffer>;
@@ -33,6 +34,12 @@ export class TactSourceVerifier implements SourceVerifier {
       };
 
       const output: string[] = [];
+
+      const { tactVersions } = await getSupportedVersions();
+
+      if (!tactVersions.includes(pkgParsed.compiler.version)) {
+        throw new Error("Unsupported tact version: " + pkgParsed.compiler.version);
+      }
 
       const verify: typeof VerifyFunction = await import(`tact-${pkgParsed.compiler.version}`)
         .then((m) => m.verify)
@@ -67,7 +74,7 @@ export class TactSourceVerifier implements SourceVerifier {
 
       const sources = await Promise.all(
         Object.entries(v.files)
-          .filter(([filename]) => !filename.match(/\.(fif|boc|ts|md|pkg)/))
+          .filter(([filename]) => filename.match(/\.(abi|tact|pkg)$/) && !filename.match(/\.\./))
           .map(async ([filename, contentB64]) => {
             const writePath = path.join(payload.tmpDir, filename);
             let content = Buffer.from(contentB64, "base64").toString("utf-8");
