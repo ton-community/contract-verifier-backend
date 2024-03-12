@@ -19,7 +19,7 @@ export async function checkPrerequisites() {
 
   if (missingEnvVars) throw new Error("Missing env vars: " + missingEnvVars);
 
-  const funcVersions = await getSupportedVersions();
+  const { funcVersions } = await getSupportedVersions();
 
   const missingFiles = funcVersions!
     .map((versionDir: string) => [
