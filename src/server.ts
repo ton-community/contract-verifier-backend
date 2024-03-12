@@ -138,7 +138,6 @@ app.get("/hc", (req, res) => {
       allowReverification: !!process.env.ALLOW_REVERIFICATION,
       privateKey: process.env.PRIVATE_KEY!,
       sourcesRegistryAddress: process.env.SOURCES_REGISTRY!,
-      verifierRegistryAddress: process.env.VERIFIER_REGISTRY!,
     },
     new TonReaderClientImpl(),
   );

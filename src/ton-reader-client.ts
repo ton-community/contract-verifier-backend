@@ -5,6 +5,7 @@ import { sha256 } from "./utils";
 import { getHttpEndpoint } from "@orbs-network/ton-access";
 import { ContractVerifier } from "@ton-community/contract-verifier-sdk";
 import { VerifierRegistry } from "./wrappers/verifier-registry";
+import { SourcesRegistry } from "./wrappers/sources-registry";
 
 export type VerifierConfig = {
   verifiers: Buffer[];
@@ -13,7 +14,6 @@ export type VerifierConfig = {
 
 export interface TonReaderClient {
   isProofDeployed(codeCellHash: string, verifierId: string): Promise<boolean | undefined>;
-
   getVerifierConfig(verifierId: string, verifierRegistryAddress: string): Promise<VerifierConfig>;
 }
 
@@ -39,12 +39,19 @@ export function createNullValue(): DictionaryValue<null> {
 export class TonReaderClientImpl implements TonReaderClient {
   async getVerifierConfig(
     verifierId: string,
-    verifierRegistryAddress: string,
+    sourcesRegistryAddress: string,
   ): Promise<VerifierConfig> {
     const tc = await getTonClient();
-    const verifierRegstryContract = tc.open(
-      VerifierRegistry.createFromAddress(Address.parse(verifierRegistryAddress)),
+
+    const sourcesRegistryContract = tc.open(
+      SourcesRegistry.createFromAddress(Address.parse(sourcesRegistryAddress)),
     );
+
+    const verifierRegistryAddress = await sourcesRegistryContract.getVerifierRegistryAddress();
+    const verifierRegstryContract = tc.open(
+      VerifierRegistry.createFromAddress(verifierRegistryAddress),
+    );
+
     const res = await verifierRegstryContract.getVerifier(toBigIntBE(sha256(verifierId)));
     const verifierConfig = res.settings!.beginParse();
 

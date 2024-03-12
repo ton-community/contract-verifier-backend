@@ -29,7 +29,6 @@ interface ControllerConfig {
   privateKey: string;
   sourcesRegistryAddress: string;
   allowReverification: boolean;
-  verifierRegistryAddress: string;
 }
 
 export class Controller {
@@ -142,7 +141,7 @@ export class Controller {
 
     const verifierConfig = await this.tonReaderClient.getVerifierConfig(
       this.config.verifierId,
-      this.config.verifierRegistryAddress,
+      this.config.sourcesRegistryAddress,
     );
 
     const { ipfsPointer, codeCellHash, senderAddress, queryId } = validateMessageCell(
