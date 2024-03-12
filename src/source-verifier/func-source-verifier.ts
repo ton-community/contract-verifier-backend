@@ -14,6 +14,9 @@ import { fiftToCodeCell } from "./fift-source-verifier";
 import { FuncCompilerVersion } from "@ton-community/contract-verifier-sdk";
 import { binaryPath } from "../binaries";
 
+const semverRegex = () =>
+  /^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-(0|[1-9A-Za-z-][0-9A-Za-z-]*)(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$/;
+
 function prepareFuncCommand(
   executable: string,
   funcArgs: string,
@@ -40,6 +43,10 @@ async function compileFuncToCodeHash(
   commandLine: string,
   tmpDir: string,
 ) {
+  if (!semverRegex().test(funcVersion)) {
+    throw new Error(`Invalid func version: ${funcVersion}`);
+  }
+
   const fiftOutFile = "output.fif";
   const executable = path.join(process.cwd(), binaryPath, funcVersion, "func");
   const funcCmd = prepareFuncCommand(executable, funcArgs, fiftOutFile, commandLine);
