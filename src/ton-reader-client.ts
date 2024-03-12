@@ -48,11 +48,11 @@ export class TonReaderClientImpl implements TonReaderClient {
     );
 
     const verifierRegistryAddress = await sourcesRegistryContract.getVerifierRegistryAddress();
-    const verifierRegstryContract = tc.open(
+    const verifierRegistryContract = tc.open(
       VerifierRegistry.createFromAddress(verifierRegistryAddress),
     );
 
-    const res = await verifierRegstryContract.getVerifier(toBigIntBE(sha256(verifierId)));
+    const res = await verifierRegistryContract.getVerifier(toBigIntBE(sha256(verifierId)));
     const verifierConfig = res.settings!.beginParse();
 
     const quorum = verifierConfig.loadUint(8);

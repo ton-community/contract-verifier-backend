@@ -52,6 +52,11 @@ export class Controller {
     this.keypair = tweetnacl.sign.keyPair.fromSecretKey(
       Buffer.from(this.config.privateKey, "base64"),
     );
+
+    if (process.env.IS_LOCAL === "1") {
+      console.log("public key", Buffer.from(this.keypair.publicKey).toString("base64"));
+    }
+
     this.tonReaderClient = tonReaderClient;
   }
 
