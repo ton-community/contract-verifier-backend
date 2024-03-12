@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { binaryPath } from "./binaries";
-import { getFuncVersions } from "./fetch-func-versions";
+import { getSupportedVersions } from "./fetch-compiler-versions";
 export async function checkPrerequisites() {
   const missingEnvVars = [
     "VERIFIER_ID",
@@ -19,7 +19,7 @@ export async function checkPrerequisites() {
 
   if (missingEnvVars) throw new Error("Missing env vars: " + missingEnvVars);
 
-  const funcVersions = await getFuncVersions();
+  const funcVersions = await getSupportedVersions();
 
   const missingFiles = funcVersions!
     .map((versionDir: string) => [

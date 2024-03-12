@@ -21,8 +21,7 @@ import { TactSourceVerifier, FileSystem } from "./source-verifier/tact-source-ve
 import { TonReaderClientImpl } from "./ton-reader-client";
 import { getLatestVerified } from "./latest-known-contracts";
 import { DeployController } from "./deploy-controller";
-import axios from "axios";
-import { getFuncVersions } from "./fetch-func-versions";
+import { getSupportedVersions } from "./fetch-compiler-versions";
 
 const app = express();
 app.use(idMiddleware());
@@ -207,7 +206,7 @@ app.get("/hc", (req, res) => {
     },
   );
 
-  await getFuncVersions();
+  await getSupportedVersions();
 
   if (process.env.NODE_ENV === "production") checkPrerequisites();
 
