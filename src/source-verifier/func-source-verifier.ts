@@ -17,13 +17,15 @@ import { binaryPath } from "../binaries";
 const semverRegex = () =>
   /^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-(0|[1-9A-Za-z-][0-9A-Za-z-]*)(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$/;
 
+export const specialCharsRegex = () => /[;>\&`\|\$\(\)\[\]\{\}'"\\\#]/;
+
 function prepareFuncCommand(
   executable: string,
   funcArgs: string,
   fiftOutFile: string,
   commandLine: string,
 ) {
-  if (/[;>\&`\|\$\(\)\[\]\{\}'"\\\#]/.test(commandLine)) {
+  if (specialCharsRegex().test(commandLine)) {
     throw new Error("Unallowed special characters in command line");
   }
   const getPath = (_path: string) => _path;
