@@ -16,7 +16,7 @@ import { IpfsCodeStorageProvider } from "./ipfs-code-storage-provider";
 import rateLimit from "express-rate-limit";
 import { checkPrerequisites } from "./check-prerequisites";
 import { FiftSourceVerifier } from "./source-verifier/fift-source-verifier";
-import { FuncSourceVerifier } from "./source-verifier/func-source-verifier";
+import { FuncSourceVerifier, specialCharsRegex } from "./source-verifier/func-source-verifier";
 import { TactSourceVerifier, FileSystem } from "./source-verifier/tact-source-verifier";
 import { TonReaderClientImpl } from "./ton-reader-client";
 import { getLatestVerified } from "./latest-known-contracts";
@@ -61,6 +61,12 @@ const sourcesUpload = multer({
     files: 50,
     fileSize: 200 * 1024,
   },
+  fileFilter(req, file, callback) {
+    callback(
+      null,
+      !specialCharsRegex().test(file.originalname) && !specialCharsRegex().test(file.fieldname),
+    );
+  },
 });
 
 const tactStagingUpload = multer({
@@ -84,7 +90,12 @@ const tactStagingUpload = multer({
     fileSize: 200 * 1024,
   },
   fileFilter(req, file, callback) {
-    callback(null, !!file.originalname.match(/\.(boc|pkg)/));
+    callback(
+      null,
+      !!file.originalname.match(/\.(boc|pkg)/) &&
+        !specialCharsRegex().test(file.originalname) &&
+        !specialCharsRegex().test(file.fieldname),
+    );
   },
 });
 
@@ -142,7 +153,8 @@ app.get("/hc", (req, res) => {
   );
 
   // Not awaiting on purpose, otherwise this may take too much time.
-  getLatestVerified(process.env.VERIFIER_ID!, process.env.IPFS_PROVIDER!);
+  if (process.env.NODE_ENV === "production")
+    getLatestVerified(process.env.VERIFIER_ID!, process.env.IPFS_PROVIDER!);
 
   app.post(
     "/source",
@@ -217,6 +229,7 @@ app.get("/hc", (req, res) => {
   app.use(function (err: any, req: any, res: any, next: any) {
     console.error(err.message); // Log error message in our server's console
     if (!err.statusCode) err.statusCode = 500; // If err has no specified error code, set error code to 'Internal Server Error (500)'
+    console.error(err.stack);
     res.status(err.statusCode).send(err); // All HTTP requests must have a response, so let's send back an error with its status
   });
 

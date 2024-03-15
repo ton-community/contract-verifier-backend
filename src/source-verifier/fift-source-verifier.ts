@@ -7,6 +7,7 @@ import path from "path";
 import { Cell } from "ton";
 import { FuncCompilerVersion } from "@ton-community/contract-verifier-sdk";
 import { binaryPath } from "../binaries";
+import { specialCharsRegex } from "./func-source-verifier";
 
 export async function fiftToCodeCell(
   funcVersion: FuncCompilerVersion,
@@ -22,6 +23,10 @@ boc>B "${b64OutFile}" B>file`;
   await writeFile(tmpB64Fift, fiftCellSource);
 
   const executable = path.join(process.cwd(), binaryPath, funcVersion, "fift");
+
+  if (specialCharsRegex().test(executable)) {
+    throw new Error("Unallowed special characters in command line");
+  }
 
   process.env.FIFTPATH = path.join(process.cwd(), binaryPath, funcVersion, "fiftlib");
 
