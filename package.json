@@ -58,6 +58,6 @@
     "tslint": "^6.1.3"
   },
   "engines": {
-    "node": "16.x"
+    "node": "18.x"
   }
 }
