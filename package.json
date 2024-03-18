@@ -18,6 +18,7 @@
     "gcs-resumable-upload": "^5.0.0",
     "ipfs-http-client": "^56.0.0",
     "ipfs-only-hash": "^4.0.0",
+    "ipfs-utils": "^9.0.14",
     "mkdirp": "^1.0.4",
     "multer": "^1.4.5-lts.1",
     "tact-1.0.0": "npm:@tact-lang/compiler@1.0.0",
