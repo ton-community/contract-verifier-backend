@@ -20,8 +20,17 @@ export class TactSourceVerifier implements SourceVerifier {
   }
 
   async verify(payload: SourceVerifyPayload): Promise<CompileResult> {
+    console.log(payload.sources.map((s) => s.path));
     try {
-      const pkgFilePath = payload.sources.find((s) => s.path.endsWith(".pkg"))!.path;
+      // Sort by depth because we want the original (top-level) pkg file
+      const pkgFilePath = payload.sources
+        .sort((a, b) => {
+          const depthA = a.path.split("/").length;
+          const depthB = b.path.split("/").length;
+          return depthA - depthB;
+        })
+        .find((s) => s.path.endsWith(".pkg"))!.path;
+
       const pkg = (await this.fileSystem.readFile(path.join(payload.tmpDir, pkgFilePath))).toString(
         "utf8",
       );

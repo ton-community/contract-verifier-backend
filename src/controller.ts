@@ -196,7 +196,7 @@ export class Controller {
     const compileResult = await compiler.verify(sourceToVerify);
 
     if (compileResult.result !== "similar") {
-      throw new Error("Invalid compilation result");
+      throw new Error("Invalid compilation result: " + compileResult.result);
     }
 
     const slice = cell.beginParse();
