@@ -20,7 +20,6 @@ export class TactSourceVerifier implements SourceVerifier {
   }
 
   async verify(payload: SourceVerifyPayload): Promise<CompileResult> {
-    console.log(payload.sources.map((s) => s.path));
     try {
       // Sort by depth because we want the original (top-level) pkg file
       const pkgFilePath = payload.sources
@@ -36,6 +35,23 @@ export class TactSourceVerifier implements SourceVerifier {
       );
 
       const pkgParsed: PackageFileFormat = JSON.parse(pkg);
+
+      // Fix windows paths (START) - tact 1.3.0 should handle this automatically
+      if (pkgParsed.sources) {
+        pkgParsed.sources = Object.fromEntries(
+          Object.entries(pkgParsed.sources).map(([key, value]) => [key.replace(/\\/g, "/"), value]),
+        );
+      }
+
+      try {
+        const parameters = JSON.parse(pkgParsed.compiler.parameters ?? "{}");
+        if (parameters.entrypoint) {
+          pkgParsed.compiler.parameters = pkgParsed.compiler.parameters?.replace(/\\/g, "/");
+        }
+      } catch (e) {
+        console.warn("Unable to replace windows paths in entrypoint. ", pkgParsed.compiler);
+      }
+      // Fix windows paths (END)
 
       const compilerSettings = {
         tactVersion: pkgParsed.compiler.version,
@@ -61,10 +77,10 @@ export class TactSourceVerifier implements SourceVerifier {
 
       const v = await timeoutPromise(
         verify({
-          pkg,
+          pkg: JSON.stringify(pkgParsed),
           logger: {
-            error: output.push,
-            log: output.push,
+            error: (e) => output.push(e),
+            log: (e) => output.push(e),
           },
         }),
         parseInt(process.env.COMPILE_TIMEOUT ?? "3000"),
