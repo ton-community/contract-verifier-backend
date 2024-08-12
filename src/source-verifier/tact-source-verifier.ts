@@ -1,10 +1,12 @@
 import { Cell } from "ton";
 import { SourceVerifier, SourceVerifyPayload, CompileResult } from "../types";
-import { PackageFileFormat } from "tact-1.1.5";
-import type { verify as VerifyFunction } from "tact-1.1.5";
+import { Logger, PackageFileFormat } from "tact-1.4.1";
+import type { LogLevel, verify as VerifyFunction, VerifyResult } from "tact-1.4.1";
+import type { verify as VerifyFunctionLegacy } from "tact-1.4.0";
 import path from "path";
 import { timeoutPromise } from "../utils";
 import { getSupportedVersions } from "../fetch-compiler-versions";
+import semver from "semver";
 
 export type FileSystem = {
   readFile: (path: string) => Promise<Buffer>;
@@ -12,11 +14,34 @@ export type FileSystem = {
   readdir: (path: string) => Promise<string[]>;
 };
 
+class OutputAppendingLogger extends Logger {
+  messages: unknown[] = [];
+  debug(message: string) {
+    this.messages.push(message);
+  }
+  info(message: string | Error): void {
+    this.messages.push(message);
+  }
+  warn(message: string | Error): void {
+    this.messages.push(message);
+  }
+  error(message: string | Error): void {
+    this.messages.push(message);
+  }
+}
+
 export class TactSourceVerifier implements SourceVerifier {
   fileSystem: FileSystem;
 
   constructor(fileSystem: FileSystem) {
     this.fileSystem = fileSystem;
+  }
+
+  private isLegacyLogger(
+    verify: typeof VerifyFunctionLegacy | typeof VerifyFunction,
+    version: string,
+  ): verify is typeof VerifyFunctionLegacy {
+    return semver.lte(version, "1.4.0");
   }
 
   async verify(payload: SourceVerifyPayload): Promise<CompileResult> {
@@ -66,7 +91,9 @@ export class TactSourceVerifier implements SourceVerifier {
         throw new Error("Unsupported tact version: " + pkgParsed.compiler.version);
       }
 
-      const verify: typeof VerifyFunction = await import(`tact-${pkgParsed.compiler.version}`)
+      const verify: typeof VerifyFunctionLegacy | typeof VerifyFunction = await import(
+        `tact-${pkgParsed.compiler.version}`
+      )
         .then((m) => m.verify)
         .catch((e) => {
           output.push(
@@ -75,18 +102,27 @@ export class TactSourceVerifier implements SourceVerifier {
           throw e;
         });
 
-      const v = await timeoutPromise(
-        verify({
-          pkg: JSON.stringify(pkgParsed),
+      let vPromise;
+
+      if (this.isLegacyLogger(verify, pkgParsed.compiler.version)) {
+        vPromise = verify({
+          pkg,
           logger: {
-            error: (e) => output.push(e),
-            log: (e) => output.push(e),
+            log: (message: string) => output.push(message),
+            error: (message: string) => output.push(message),
           },
-        }),
-        parseInt(process.env.COMPILE_TIMEOUT ?? "3000"),
-      );
+        });
+      } else {
+        vPromise = verify({
+          pkg,
+          logger: new OutputAppendingLogger(),
+        });
+      }
+
+      const v = await timeoutPromise(vPromise, parseInt(process.env.COMPILE_TIMEOUT ?? "3000"));
 
       if (!v.ok) {
+        console.log(output, "shahar", v.error);
         console.error("Failed to compile tact package", output.join("\n"));
         return {
           compilerSettings,
@@ -138,7 +174,7 @@ export class TactSourceVerifier implements SourceVerifier {
       };
     } catch (e) {
       return {
-        error: e.toString(),
+        error: JSON.stringify(e, Object.getOwnPropertyNames(e)),
         hash: null,
         compilerSettings: { tactVersion: "unknown" },
         sources: [],
