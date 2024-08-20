@@ -1,12 +1,12 @@
-import { Cell } from "ton";
-import { SourceVerifier, SourceVerifyPayload, CompileResult } from "../types";
-import { Logger, PackageFileFormat } from "tact-1.4.1";
-import type { LogLevel, verify as VerifyFunction, VerifyResult } from "tact-1.4.1";
-import type { verify as VerifyFunctionLegacy } from "tact-1.4.0";
 import path from "path";
-import { timeoutPromise } from "../utils";
-import { getSupportedVersions } from "../fetch-compiler-versions";
 import semver from "semver";
+import type { verify as VerifyFunctionLegacy } from "tact-1.4.0";
+import { Logger, PackageFileFormat } from "tact-1.4.1";
+import type { verify as VerifyFunction } from "tact-1.4.4";
+import { Cell } from "ton";
+import { getSupportedVersions } from "../fetch-compiler-versions";
+import { CompileResult, SourceVerifier, SourceVerifyPayload } from "../types";
+import { timeoutPromise } from "../utils";
 
 export type FileSystem = {
   readFile: (path: string) => Promise<Buffer>;
