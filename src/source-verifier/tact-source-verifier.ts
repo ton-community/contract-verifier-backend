@@ -2,7 +2,7 @@ import path from "path";
 import semver from "semver";
 import type { verify as VerifyFunctionLegacy } from "tact-1.4.0";
 import { Logger, PackageFileFormat } from "tact-1.4.1";
-import type { verify as VerifyFunction } from "tact-1.4.4";
+import type { verify as VerifyFunction } from "tact-1.5.1";
 import { Cell } from "ton";
 import { getSupportedVersions } from "../fetch-compiler-versions";
 import { CompileResult, SourceVerifier, SourceVerifyPayload } from "../types";
