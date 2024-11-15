@@ -59,7 +59,7 @@ const sourcesUpload = multer({
   }),
   limits: {
     files: 50,
-    fileSize: 200 * 1024,
+    fileSize: 500 * 1024,
   },
   fileFilter(req, file, callback) {
     callback(
