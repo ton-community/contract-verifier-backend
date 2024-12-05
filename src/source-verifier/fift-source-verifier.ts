@@ -8,6 +8,9 @@ import { Cell } from "ton";
 import { FuncCompilerVersion } from "@ton-community/contract-verifier-sdk";
 import { binaryPath } from "../binaries";
 import { specialCharsRegex } from "./func-source-verifier";
+import { getLogger } from "../logger";
+
+const logger = getLogger("fift-source-verifier");
 
 export async function fiftToCodeCell(
   funcVersion: FuncCompilerVersion,
@@ -61,7 +64,7 @@ export class FiftSourceVerifier implements SourceVerifier {
         sources,
       };
     } catch (e) {
-      console.error(e);
+      logger.error(e);
       return {
         hash: null,
         result: "unknown_error",

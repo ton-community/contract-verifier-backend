@@ -22,6 +22,9 @@ import { TonReaderClientImpl } from "./ton-reader-client";
 import { getLatestVerified } from "./latest-known-contracts";
 import { DeployController } from "./deploy-controller";
 import { getSupportedVersions } from "./fetch-compiler-versions";
+import { getLogger } from "./logger";
+
+const logger = getLogger("server");
 
 const app = express();
 app.use(idMiddleware());
@@ -212,7 +215,7 @@ app.get("/hc", (req, res) => {
         });
         res.json(result);
       } catch (e) {
-        console.error(e.toString());
+        logger.error(e);
         res.status(500).send(e.toString());
       }
     },
@@ -227,14 +230,13 @@ app.get("/hc", (req, res) => {
   });
 
   app.use(function (err: any, req: any, res: any, next: any) {
-    console.error(err.message); // Log error message in our server's console
+    logger.error(err); // Log error message in our server's console
     if (!err.statusCode) err.statusCode = 500; // If err has no specified error code, set error code to 'Internal Server Error (500)'
-    console.error(err.stack);
     res.status(err.statusCode).send(err); // All HTTP requests must have a response, so let's send back an error with its status
   });
 
   app.listen(port, () => {
-    console.log(
+    logger.info(
       `Ton Contract Verifier Server running on ${port}. Verifier Id: ${process.env.VERIFIER_ID}`,
     );
   });
