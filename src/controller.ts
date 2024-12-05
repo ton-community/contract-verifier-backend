@@ -21,8 +21,11 @@ import {
   verifierRegistryForwardMessage,
 } from "./cell-builders";
 import mkdirp from "mkdirp";
+import { getLogger } from "./logger";
 
 export type Base64URL = string;
+
+const logger = getLogger("controller");
 
 interface ControllerConfig {
   verifierId: string;
@@ -113,7 +116,7 @@ export class Controller {
       true,
     );
 
-    console.log(ipfsLink);
+    logger.info(ipfsLink);
 
     const queryId = random64BitNumber();
 

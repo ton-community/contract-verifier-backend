@@ -7,6 +7,9 @@ import { Cell } from "ton";
 import { getSupportedVersions } from "../fetch-compiler-versions";
 import { CompileResult, SourceVerifier, SourceVerifyPayload } from "../types";
 import { timeoutPromise } from "../utils";
+import { getLogger } from "../logger";
+
+const logger = getLogger("tact-source-verifier");
 
 export type FileSystem = {
   readFile: (path: string) => Promise<Buffer>;
@@ -74,7 +77,10 @@ export class TactSourceVerifier implements SourceVerifier {
           pkgParsed.compiler.parameters = pkgParsed.compiler.parameters?.replace(/\\/g, "/");
         }
       } catch (e) {
-        console.warn("Unable to replace windows paths in entrypoint. ", pkgParsed.compiler);
+        logger.error(e);
+        logger.warn("Unable to replace windows paths in entrypoint. ", {
+          info: pkgParsed.compiler,
+        });
       }
       // Fix windows paths (END)
 
@@ -119,22 +125,29 @@ export class TactSourceVerifier implements SourceVerifier {
         });
       }
 
-      const v = await timeoutPromise(vPromise, parseInt(process.env.COMPILE_TIMEOUT ?? "3000"));
+      const verificationResult = await timeoutPromise(
+        vPromise,
+        parseInt(process.env.COMPILE_TIMEOUT ?? "3000"),
+      );
 
-      if (!v.ok) {
-        console.log(output, "shahar", v.error);
-        console.error("Failed to compile tact package", output.join("\n"));
+      if (!verificationResult.ok) {
+        logger.error("Failed to compile tact package", {
+          output: output.join("\n"),
+          verificationResult: verificationResult,
+          compilerSettings,
+        });
         return {
           compilerSettings,
-          error: [v.error, ...output].join("\n"),
+          error: [verificationResult.error, ...output].join("\n"),
           hash: null,
-          result: v.error === "verification-failed" ? "not_similar" : "unknown_error",
+          result:
+            verificationResult.error === "verification-failed" ? "not_similar" : "unknown_error",
           sources: [],
         };
       }
 
       const sources = await Promise.all(
-        Object.entries(v.files)
+        Object.entries(verificationResult.files)
           .filter(([filename]) => filename.match(/\.(abi|tact|pkg)$/) && !filename.match(/\.\./))
           .map(async ([filename, contentB64]) => {
             const writePath = path.join(payload.tmpDir, filename);
@@ -158,7 +171,7 @@ export class TactSourceVerifier implements SourceVerifier {
       */
       sources.push({ filename: pkgFilePath });
 
-      const compiledHash = Cell.fromBoc(Buffer.from(v.package.code, "base64"))[0]
+      const compiledHash = Cell.fromBoc(Buffer.from(verificationResult.package.code, "base64"))[0]
         .hash()
         .toString("base64");
 
