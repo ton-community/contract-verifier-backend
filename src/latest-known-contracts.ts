@@ -6,6 +6,7 @@ import { sha256 } from "./utils";
 import { getTonClient } from "./ton-reader-client";
 import { toBigIntBE } from "bigint-buffer";
 import { SourceItem } from "./wrappers/source-item";
+import { getLogger } from "./logger";
 
 dotenv.config({ path: ".env.local" });
 dotenv.config({ path: ".env" });
@@ -17,6 +18,8 @@ const contracts: {
   compiler: string;
 }[] = [];
 let lastUpdateTime: null | Date = null;
+
+const logger = getLogger("latest-known-contracts");
 
 async function update(verifierIdSha256: Buffer, ipfsProvider: string) {
   // TODO - this means that clients get empty responses quickly instead of waiting
@@ -94,7 +97,7 @@ async function update(verifierIdSha256: Buffer, ipfsProvider: string) {
             compiler: ipfsData.data.compiler,
           });
         } catch (e) {
-          console.warn(e);
+          logger.error(e);
           callback(null);
         }
       },
@@ -103,7 +106,7 @@ async function update(verifierIdSha256: Buffer, ipfsProvider: string) {
     // @ts-ignore
     contracts.unshift(...results.filter((o: any) => o));
   } catch (e) {
-    console.warn(e);
+    logger.error(e);
     lastUpdateTime = null;
   }
 }
