@@ -38,6 +38,7 @@
     "tact-1.5.1": "npm:@tact-lang/compiler@1.5.1",
     "tact-1.5.2": "npm:@tact-lang/compiler@1.5.2",
     "tact-1.5.3": "npm:@tact-lang/compiler@1.5.3",
+    "tact-1.6.0": "npm:@tact-lang/compiler@1.6.0",
     "ton": "^13.4.1",
     "ton-core": "^0.49.0",
     "ts-node": "^10.9.1",
