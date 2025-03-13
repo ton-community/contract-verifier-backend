@@ -40,6 +40,7 @@
     "tact-1.5.3": "npm:@tact-lang/compiler@1.5.3",
     "tact-1.5.4": "npm:@tact-lang/compiler@1.5.4",
     "tact-1.6.2": "npm:@tact-lang/compiler@1.6.2",
+    "tact-1.6.3": "npm:@tact-lang/compiler@1.6.3",
     "ton": "^13.4.1",
     "ton-core": "^0.49.0",
     "ts-node": "^10.9.1",
