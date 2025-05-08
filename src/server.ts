@@ -21,7 +21,6 @@ import { TactSourceVerifier, FileSystem } from "./source-verifier/tact-source-ve
 import { TonReaderClientImpl } from "./ton-reader-client";
 import { getLatestVerified } from "./latest-known-contracts";
 import { DeployController } from "./deploy-controller";
-import { getSupportedVersions } from "./fetch-compiler-versions";
 import { getLogger } from "./logger";
 
 const logger = getLogger("server");
@@ -220,8 +219,6 @@ app.get("/hc", (req, res) => {
       }
     },
   );
-
-  await getSupportedVersions();
 
   if (process.env.NODE_ENV === "production") checkPrerequisites();
 

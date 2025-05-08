@@ -1,0 +1,6 @@
+- find private key testnet
+- func version upgrade guide
+- tact version upgrade guide
+- meaning of orbs.com verifier id -- where is it validated
+- documentation including deployment script
+- alerts

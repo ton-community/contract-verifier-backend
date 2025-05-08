@@ -4,6 +4,7 @@ import { pkg162 } from "./res/tact162pkg";
 import { pkg163 } from "./res/tact163pkg";
 import { pkg141 } from "./res/tact141pkg";
 
+// TODO FIX
 jest.mock("../fetch-compiler-versions", () => ({
   getSupportedVersions: jest.fn().mockResolvedValue({
     funcVersions: [],
