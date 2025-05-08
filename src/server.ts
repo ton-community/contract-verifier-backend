@@ -155,8 +155,9 @@ app.get("/hc", (req, res) => {
   );
 
   // Not awaiting on purpose, otherwise this may take too much time.
-  if (process.env.NODE_ENV === "production")
+  if (process.env.NODE_ENV === "production") {
     getLatestVerified(process.env.VERIFIER_ID!, process.env.IPFS_PROVIDER!);
+  }
 
   app.post(
     "/source",
