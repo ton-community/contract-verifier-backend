@@ -2,12 +2,12 @@ import path from "path";
 import semver from "semver";
 import type { verify as VerifyFunctionLegacy } from "tact-1.4.0";
 import { Logger, PackageFileFormat } from "tact-1.4.1";
-import type { verify as VerifyFunction } from "tact-1.6.2";
+import type { verify as VerifyFunction } from "tact-1.6.7";
 import { Cell } from "ton";
-import { getSupportedVersions } from "../fetch-compiler-versions";
+import { DynamicImporter } from "../dynamic-importer";
+import { getLogger } from "../logger";
 import { CompileResult, SourceVerifier, SourceVerifyPayload } from "../types";
 import { timeoutPromise } from "../utils";
-import { getLogger } from "../logger";
 
 const logger = getLogger("tact-source-verifier");
 
@@ -91,22 +91,9 @@ export class TactSourceVerifier implements SourceVerifier {
 
       const output: string[] = [];
 
-      const { tactVersions } = await getSupportedVersions();
-
-      if (!tactVersions.includes(pkgParsed.compiler.version)) {
-        throw new Error("Unsupported tact version: " + pkgParsed.compiler.version);
-      }
-
-      const verify: typeof VerifyFunctionLegacy | typeof VerifyFunction = await import(
-        `tact-${pkgParsed.compiler.version}`
-      )
-        .then((m) => m.verify)
-        .catch((e) => {
-          output.push(
-            `Failed to load tact v${pkgParsed.compiler.version}. It probably doesn't exist on the server.`,
-          );
-          throw e;
-        });
+      const module = await DynamicImporter.tryImport("tact", pkgParsed.compiler.version);
+      console.log("Dynamically imported compiler version");
+      const verify: typeof VerifyFunctionLegacy | typeof VerifyFunction = module.verify;
 
       let vPromise;
 

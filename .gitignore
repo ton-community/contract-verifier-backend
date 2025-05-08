@@ -11,3 +11,4 @@ coverage/
 secrets-config.json
 *.fc
 release/
+compilers/
