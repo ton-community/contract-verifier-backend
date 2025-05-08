@@ -28,7 +28,9 @@ class SupportedVersionsReader {
               "https://raw.githubusercontent.com/ton-community/contract-verifier-config/main/config.json",
               { responseType: "json" },
             );
-            console.log(data);
+            if (!this._versions) {
+              this.logger.info(`Initial fetch of supported versions successful`);
+            }
             this._versions = {
               funcVersions: data.funcVersions,
               tactVersions: data.tactVersions,

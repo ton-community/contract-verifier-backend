@@ -5,12 +5,12 @@ import { pkg163 } from "./res/tact163pkg";
 import { pkg141 } from "./res/tact141pkg";
 
 // TODO FIX
-jest.mock("../fetch-compiler-versions", () => ({
-  getSupportedVersions: jest.fn().mockResolvedValue({
-    funcVersions: [],
-    tactVersions: ["1.0.0", "1.4.1", "1.6.2", "1.6.3"],
-  }),
-}));
+// jest.mock("../fetch-compiler-versions", () => ({
+//   getSupportedVersions: jest.fn().mockResolvedValue({
+//     funcVersions: [],
+//     tactVersions: ["1.0.0", "1.4.1", "1.6.2", "1.6.3"],
+//   }),
+// }));
 
 describe("TactSourceVerifier", () => {
   const packages = [

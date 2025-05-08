@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { binaryPath } from "./binaries";
-import { supportedVersionsReader } from "./fetch-compiler-versions";
+import { supportedVersionsReader } from "./supported-versions-reader";
 export async function checkPrerequisites() {
   const missingEnvVars = [
     "VERIFIER_ID",

@@ -1,7 +1,9 @@
 import { exec } from "child_process";
 import { promisify } from "util";
 import path from "path";
-import { supportedVersionsReader } from "./fetch-compiler-versions";
+import { supportedVersionsReader } from "./supported-versions-reader";
+import { access } from "fs/promises";
+import promiseRetry from "promise-retry";
 
 const execAsync = promisify(exec);
 
@@ -19,16 +21,10 @@ export class DynamicImporter {
       }
       const installPath = path.resolve(process.cwd(), `compilers/tact-compiler-${version}`);
 
-      const modulePath = path.join(
-        installPath,
-        "node_modules",
-        "@tact-lang",
-        "compiler",
-        "dist",
-        "index.js",
-      );
+      const modulePath = path.join(installPath, "node_modules", "@tact-lang", "compiler");
 
       try {
+        await access(modulePath);
         return await import(modulePath);
       } catch {
         console.log(`Version ${version} not found, installing...`);
@@ -38,5 +34,14 @@ export class DynamicImporter {
     } else {
       throw new Error("FunC unsupported");
     }
+  }
+
+  private static async waitForModule(filePath: string) {
+    await promiseRetry(
+      async () => {
+        await access(filePath);
+      },
+      { retries: 10, maxRetryTime: 200 },
+    );
   }
 }
