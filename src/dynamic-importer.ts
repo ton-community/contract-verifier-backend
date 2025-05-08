@@ -35,13 +35,4 @@ export class DynamicImporter {
       throw new Error("FunC unsupported");
     }
   }
-
-  private static async waitForModule(filePath: string) {
-    await promiseRetry(
-      async () => {
-        await access(filePath);
-      },
-      { retries: 10, maxRetryTime: 200 },
-    );
-  }
 }

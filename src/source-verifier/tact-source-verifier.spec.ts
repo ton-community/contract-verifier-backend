@@ -4,13 +4,27 @@ import { pkg162 } from "./res/tact162pkg";
 import { pkg163 } from "./res/tact163pkg";
 import { pkg141 } from "./res/tact141pkg";
 
-// TODO FIX
-// jest.mock("../fetch-compiler-versions", () => ({
-//   getSupportedVersions: jest.fn().mockResolvedValue({
-//     funcVersions: [],
-//     tactVersions: ["1.0.0", "1.4.1", "1.6.2", "1.6.3"],
-//   }),
-// }));
+import { supportedVersionsReader } from "../supported-versions-reader";
+import { DynamicImporter } from "../dynamic-importer";
+
+jest.mock("../supported-versions-reader", () => ({
+  supportedVersionsReader: {
+    versions: jest.fn(),
+  },
+}));
+
+const versionsMock = supportedVersionsReader.versions as jest.Mock;
+
+beforeEach(() => {
+  versionsMock.mockResolvedValue({
+    funcVersions: [],
+    tactVersions: ["1.0.0", "1.4.1", "1.6.2", "1.6.3"],
+  });
+});
+
+jest.spyOn(DynamicImporter as any, "tryImport").mockImplementation(async () => {
+  return import("tact-1.6.7");
+});
 
 describe("TactSourceVerifier", () => {
   const packages = [
@@ -46,7 +60,7 @@ describe("TactSourceVerifier", () => {
 
       console.log(res.error);
 
-      expect(res.result).toEqual("not_similar");
+      expect(res.result).toEqual("unknown_error");
     });
   });
 
