@@ -92,6 +92,7 @@ export class TactSourceVerifier implements SourceVerifier {
       const output: string[] = [];
 
       const module = await DynamicImporter.tryImport("tact", pkgParsed.compiler.version);
+      console.log("Dynamically imported compiler version");
       const verify: typeof VerifyFunctionLegacy | typeof VerifyFunction = module.verify;
 
       let vPromise;
