@@ -1,3 +1,8 @@
+import { FuncCompiler } from "@ton-community/func-js";
+import { readFile } from "fs/promises";
+import path from "path";
+import { Cell } from "ton-core";
+import { DynamicImporter } from "../dynamic-importer";
 import {
   CompileResult,
   FuncCliCompileSettings,
@@ -5,11 +10,6 @@ import {
   SourceVerifier,
   SourceVerifyPayload,
 } from "../types";
-import { compileFunc, compilerVersion, FuncCompiler, latestCompiler } from "@ton-community/func-js";
-import { Cell } from "ton-core";
-import { DynamicImporter } from "../dynamic-importer";
-import { readFile } from "fs/promises";
-import path from "path";
 
 export class FuncJSSourceVerifier implements SourceVerifier {
   async verify(payload: SourceVerifyPayload): Promise<CompileResult> {
