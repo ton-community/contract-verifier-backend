@@ -9,8 +9,10 @@ const execAsync = promisify(exec);
 
 enum CompilerPackage {
   tact = "@tact-lang/compiler",
+  func = "@ton-community/func-js-bin",
 }
 
+// TODO DRY
 export class DynamicImporter {
   static async tryImport(compiler: "tact" | "func", version: string) {
     const versions = await supportedVersionsReader.versions();
@@ -32,7 +34,22 @@ export class DynamicImporter {
         return await import(modulePath);
       }
     } else {
-      throw new Error("FunC unsupported");
+      if (!versions.funcVersions.includes(version)) {
+        throw new Error(`Unsupported func version:${version}`);
+      }
+
+      const installPath = path.resolve(process.cwd(), `compilers/func-compiler-${version}`);
+
+      const modulePath = path.join(installPath, "node_modules", "@ton-community", "func-js-bin");
+
+      try {
+        await access(modulePath);
+        return await import(modulePath);
+      } catch {
+        console.log(`Version ${version} not found, installing...`);
+        await execAsync(`npm install ${CompilerPackage.func}@${version} --prefix ${installPath}`);
+        return await import(modulePath);
+      }
     }
   }
 }

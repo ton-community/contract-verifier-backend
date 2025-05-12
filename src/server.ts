@@ -22,6 +22,7 @@ import { TonReaderClientImpl } from "./ton-reader-client";
 import { getLatestVerified } from "./latest-known-contracts";
 import { DeployController } from "./deploy-controller";
 import { getLogger } from "./logger";
+import { FuncJSSourceVerifier } from "./source-verifier/funcjs-source-verifier";
 
 const logger = getLogger("server");
 
@@ -141,7 +142,7 @@ app.get("/hc", (req, res) => {
   const controller = new Controller(
     new IpfsCodeStorageProvider(process.env.INFURA_ID!, process.env.INFURA_SECRET!),
     {
-      func: new FuncSourceVerifier(),
+      func: new FuncJSSourceVerifier(), //new FuncSourceVerifier(),
       fift: new FiftSourceVerifier(),
       tact: new TactSourceVerifier(fileSystem),
     },
