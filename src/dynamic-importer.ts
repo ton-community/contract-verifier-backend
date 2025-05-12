@@ -6,7 +6,6 @@ import { supportedVersionsReader } from "./supported-versions-reader";
 
 const execAsync = promisify(exec);
 
-// TODO DRY
 export class DynamicImporter {
   static async tryImport(compiler: "tact" | "func", version: string) {
     const versions = await supportedVersionsReader.versions();
