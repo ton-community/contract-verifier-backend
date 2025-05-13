@@ -2,6 +2,10 @@ import fs from "fs";
 import path from "path";
 import { binaryPath } from "./binaries";
 import { getSupportedVersions } from "./fetch-compiler-versions";
+import { getLogger } from "./logger";
+
+const logger = getLogger("checkPrereqs");
+
 export async function checkPrerequisites() {
   const missingEnvVars = [
     "VERIFIER_ID",
@@ -32,5 +36,5 @@ export async function checkPrerequisites() {
     .filter((f) => !fs.existsSync(path.join(process.cwd(), f)))
     .join(" ");
 
-  if (missingFiles) throw new Error("Missing files: " + missingFiles);
+  logger.error("Missing files: " + missingFiles);
 }
