@@ -14,6 +14,9 @@ dotenv.config({ path: ".env" });
 
 const logger = getLogger("latest-known-contracts");
 
+const isTestnet = process.env.NETWORK === "testnet";
+const cacheKey = isTestnet ? "cacheTestnet" : "cache";
+
 type TonTransactionsArchiveProviderParams = {
   address: string;
   limit: number;
@@ -35,9 +38,8 @@ async function getTransactions(params: TonTransactionsArchiveProviderParams) {
   }
 
   const response = await fetch(
-    `https://${
-      process.env.NETWORK === "testnet" ? "testnet." : ""
-    }toncenter.com/api/index/getTransactionsByAddress?` + new URLSearchParams(urlParams),
+    `https://${isTestnet ? "testnet." : ""}toncenter.com/api/index/getTransactionsByAddress?` +
+      new URLSearchParams(urlParams),
   );
 
   const txns = (await response.json()) as any[];
@@ -53,7 +55,8 @@ async function getTransactions(params: TonTransactionsArchiveProviderParams) {
 async function update(verifierIdSha256: Buffer, ipfsProvider: string) {
   try {
     let lastTimestamp =
-      (await firebaseProvider.readItems<{ timestamp: number }>("cache", 1))?.[0]?.timestamp ?? null;
+      (await firebaseProvider.readItems<{ timestamp: number }>(cacheKey, 1))?.[0]?.timestamp ??
+      null;
 
     if (lastTimestamp) lastTimestamp += 1;
 
@@ -133,7 +136,7 @@ async function update(verifierIdSha256: Buffer, ipfsProvider: string) {
     logger.debug(res.filter((o) => !!o).length);
 
     for (const r of res.filter((o) => !!o)) {
-      await firebaseProvider.addForDescendingOrder("cache", r);
+      await firebaseProvider.addForDescendingOrder(cacheKey, r);
     }
   } catch (e) {
     logger.error(e);
@@ -151,5 +154,5 @@ export function pollLatestVerified(verifierId: string, ipfsProvider: string) {
 }
 
 export async function getLatestVerified() {
-  return firebaseProvider.readItems("cache", 500);
+  return firebaseProvider.readItems(cacheKey, 500);
 }
