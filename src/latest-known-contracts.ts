@@ -65,7 +65,6 @@ async function update(verifierIdSha256: Buffer, ipfsProvider: string) {
   let lockAcquired = false;
   try {
     const txnResult = await firebaseProvider.setWithTxn<{ timestamp: number }>(lockKey, (lock) => {
-      console.log(lock, "HI");
       if (lock && Date.now() - lock.timestamp < 40_000) {
         logger.debug(`Lock acquired by another instance`);
         return;
