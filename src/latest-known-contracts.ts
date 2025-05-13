@@ -37,12 +37,19 @@ async function getTransactions(params: TonTransactionsArchiveProviderParams) {
     urlParams.start_utime = params.startUtime.toString();
   }
 
-  const response = await fetch(
+  const url =
     `https://${isTestnet ? "testnet." : ""}toncenter.com/api/index/getTransactionsByAddress?` +
-      new URLSearchParams(urlParams),
-  );
+    new URLSearchParams(urlParams);
+
+  const response = await fetch(url);
+
+  logger.debug(url);
 
   const txns = (await response.json()) as any[];
+
+  if ("error" in txns) {
+    throw new Error(String(txns.error));
+  }
 
   return txns
     .filter((tx) => tx.out_msgs.length === 1)
@@ -53,6 +60,7 @@ async function getTransactions(params: TonTransactionsArchiveProviderParams) {
 }
 
 async function update(verifierIdSha256: Buffer, ipfsProvider: string) {
+  logger.debug(`Updating latest verified`);
   try {
     let lastTimestamp =
       (await firebaseProvider.readItems<{ timestamp: number }>(cacheKey, 1))?.[0]?.timestamp ??
@@ -74,7 +82,7 @@ async function update(verifierIdSha256: Buffer, ipfsProvider: string) {
 
     const tc = await getTonClient();
 
-    const res = await async.mapLimit(txns, 10, async (obj, callback) => {
+    const res = await async.mapLimit(txns, 10, async (obj: any) => {
       try {
         const sourceItemContract = tc.open(
           SourceItem.createFromAddress(Address.parse(obj.address)),
@@ -83,7 +91,6 @@ async function update(verifierIdSha256: Buffer, ipfsProvider: string) {
 
         // Not our verifier id, ignore
         if (verifierId !== toBigIntBE(verifierIdSha256)) {
-          callback();
           return;
         }
 
@@ -115,22 +122,17 @@ async function update(verifierIdSha256: Buffer, ipfsProvider: string) {
           (m) => m[1],
         );
 
-        callback(null, {
+        return {
           address: ipfsData.data.knownContractAddress,
           mainFile: nameParts[nameParts.length - 1],
           compiler: ipfsData.data.compiler,
           timestamp: obj.timestamp,
-        });
+        };
       } catch (e) {
         logger.warn(e);
-        callback(e, null);
+        return;
       }
     });
-
-    // @ts-ignore
-    // contracts.unshift(...results.filter((o: any) => o));
-
-    // results.filter((o: any) => o)
 
     logger.debug(res.length);
     logger.debug(res.filter((o) => !!o).length);
@@ -144,6 +146,8 @@ async function update(verifierIdSha256: Buffer, ipfsProvider: string) {
 }
 
 export function pollLatestVerified(verifierId: string, ipfsProvider: string) {
+  void update(sha256(verifierId), ipfsProvider);
+
   setInterval(async () => {
     try {
       await update(sha256(verifierId), ipfsProvider);
