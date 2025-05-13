@@ -22,7 +22,7 @@ import {
 } from "./source-verifier/func-source-verifier";
 import { TactSourceVerifier, FileSystem } from "./source-verifier/tact-source-verifier";
 import { TonReaderClientImpl } from "./ton-reader-client";
-import { getLatestVerified } from "./latest-known-contracts";
+import { getLatestVerified, pollLatestVerified } from "./latest-known-contracts";
 import { DeployController } from "./deploy-controller";
 import { getLogger } from "./logger";
 import { FuncJSSourceVerifier } from "./source-verifier/funcjs-source-verifier";
@@ -161,10 +161,8 @@ app.get("/hc", (req, res) => {
     new TonReaderClientImpl(),
   );
 
-  // Not awaiting on purpose, otherwise this may take too much time.
-  if (process.env.NODE_ENV === "production") {
-    getLatestVerified(process.env.VERIFIER_ID!, process.env.IPFS_PROVIDER!);
-  }
+  if (process.env.NODE_ENV === "production")
+    pollLatestVerified(process.env.VERIFIER_ID!, process.env.IPFS_PROVIDER!);
 
   app.post(
     "/source",
@@ -231,7 +229,7 @@ app.get("/hc", (req, res) => {
   if (process.env.NODE_ENV === "production") checkPrerequisites();
 
   app.get("/latestVerified", async (req, res) => {
-    res.json(await getLatestVerified(process.env.VERIFIER_ID!, process.env.IPFS_PROVIDER!));
+    res.json(await getLatestVerified());
   });
 
   app.use(function (err: any, req: any, res: any, next: any) {
