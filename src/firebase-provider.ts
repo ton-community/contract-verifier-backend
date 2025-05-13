@@ -49,19 +49,16 @@ class FirebaseProvider {
   async readItems<T>(key: string, limit = 500) {
     try {
       const r = db.ref(key);
-      const res = await r.orderByKey().limitToLast(limit).get();
+      const res = await r.orderByKey().limitToFirst(limit).get();
 
       if (res.exists()) {
-        const val: T[] = [];
+        const items: T[] = [];
 
         res.forEach((v) => {
-          val.push({
-            key: v.key,
-            ...v.val(),
-          });
+          items.push(v.val());
         });
 
-        return val;
+        return items;
       } else {
         return null;
       }

@@ -12,14 +12,6 @@ import { firebaseProvider } from "./firebase-provider";
 dotenv.config({ path: ".env.local" });
 dotenv.config({ path: ".env" });
 
-const sourceItemKnownContract: Record<string, boolean> = {};
-const contracts: {
-  address: string;
-  mainFile: string;
-  compiler: string;
-}[] = [];
-let lastUpdateTime: null | Date = null;
-
 const logger = getLogger("latest-known-contracts");
 
 type TonTransactionsArchiveProviderParams = {
@@ -27,21 +19,25 @@ type TonTransactionsArchiveProviderParams = {
   limit: number;
   offset: number;
   sort: "asc" | "desc";
-  startUtime: number;
+  startUtime: number | null;
 };
 
 async function getTransactions(params: TonTransactionsArchiveProviderParams) {
+  const urlParams: any = {
+    address: params.address,
+    limit: params.limit.toString(),
+    sort: params.sort,
+    include_msg_body: "false",
+  };
+
+  if (params.startUtime) {
+    urlParams.start_utime = params.startUtime.toString();
+  }
+
   const response = await fetch(
     `https://${
       process.env.NETWORK === "testnet" ? "testnet." : ""
-    }toncenter.com/api/index/getTransactionsByAddress?` +
-      new URLSearchParams({
-        address: params.address,
-        limit: params.limit.toString(),
-        sort: params.sort,
-        include_msg_body: "false",
-        start_utime: params.startUtime.toString(),
-      }),
+    }toncenter.com/api/index/getTransactionsByAddress?` + new URLSearchParams(urlParams),
   );
 
   const txns = (await response.json()) as any[];
@@ -56,32 +52,38 @@ async function getTransactions(params: TonTransactionsArchiveProviderParams) {
 
 async function update(verifierIdSha256: Buffer, ipfsProvider: string) {
   try {
-    const lastTimestamp = await firebaseProvider.get<number>("cacheTimestamp");
+    let lastTimestamp =
+      (await firebaseProvider.readItems<{ timestamp: number }>("cache", 1))?.[0]?.timestamp ?? null;
+
+    if (lastTimestamp) lastTimestamp += 1;
+
+    logger.debug(`Got latest timestamp: ${lastTimestamp}`);
 
     const txns = await getTransactions({
       address: process.env.SOURCES_REGISTRY!,
       limit: 100,
       offset: 0,
       sort: "asc",
-      startUtime: lastTimestamp ?? 0,
+      startUtime: lastTimestamp,
     });
+
+    console.log(txns.length);
 
     const tc = await getTonClient();
 
-    const results = await async.mapLimit(txns, 10, async function (dest: string, callback) {
-      if (sourceItemKnownContract[dest]) {
-        callback(null, null);
-        return;
-      }
-
+    const res = await async.mapLimit(txns, 10, async (obj, callback) => {
       try {
-        const sourceItemContract = tc.open(SourceItem.createFromAddress(Address.parse(dest)));
+        const sourceItemContract = tc.open(
+          SourceItem.createFromAddress(Address.parse(obj.address)),
+        );
         const { verifierId, data } = await sourceItemContract.getData();
 
+        // Not our verifier id, ignore
         if (verifierId !== toBigIntBE(verifierIdSha256)) {
           callback();
           return;
         }
+
         const contentCell = data!.beginParse();
 
         const version = contentCell.loadUint(8);
@@ -110,32 +112,44 @@ async function update(verifierIdSha256: Buffer, ipfsProvider: string) {
           (m) => m[1],
         );
 
-        sourceItemKnownContract[dest] = true;
         callback(null, {
           address: ipfsData.data.knownContractAddress,
           mainFile: nameParts[nameParts.length - 1],
           compiler: ipfsData.data.compiler,
+          timestamp: obj.timestamp,
         });
       } catch (e) {
-        logger.error(e);
-        callback(null);
+        logger.warn(e);
+        callback(e, null);
       }
     });
 
     // @ts-ignore
-    contracts.unshift(...results.filter((o: any) => o));
+    // contracts.unshift(...results.filter((o: any) => o));
+
+    // results.filter((o: any) => o)
+
+    logger.debug(res.length);
+    logger.debug(res.filter((o) => !!o).length);
+
+    for (const r of res.filter((o) => !!o)) {
+      await firebaseProvider.addForDescendingOrder("cache", r);
+    }
   } catch (e) {
     logger.error(e);
-    lastUpdateTime = null;
   }
 }
 
-export async function getLatestVerified(verifierId: string, ipfsProvider: string) {
-  await firebaseProvider.addForDescendingOrder("cache", {
-    ipfs: "123" + Date.now(),
-  });
-  console.log(await firebaseProvider.readItems("cache"));
-  // const verifierIdSha256 = sha256(verifierId);
-  // await update(verifierIdSha256, ipfsProvider);
-  // return contracts;
+export async function pollLatestVerified(verifierId: string, ipfsProvider: string) {
+  setInterval(async () => {
+    try {
+      await update(sha256(verifierId), ipfsProvider);
+    } catch (e) {
+      logger.warn(`Unable to fetch latest verified ${e}`);
+    }
+  }, 60_000);
+}
+
+export async function getLatestVerified() {
+  return firebaseProvider.readItems("cache", 500);
 }
