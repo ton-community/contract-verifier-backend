@@ -154,8 +154,8 @@ app.get("/hc", (req, res) => {
     new TonReaderClientImpl(),
   );
 
-  if (process.env.NODE_ENV === "production")
-    pollLatestVerified(process.env.VERIFIER_ID!, process.env.IPFS_PROVIDER!);
+  // if (process.env.NODE_ENV === "production")
+  pollLatestVerified(process.env.VERIFIER_ID!, process.env.IPFS_PROVIDER!);
 
   app.post(
     "/source",

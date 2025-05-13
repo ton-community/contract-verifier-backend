@@ -30,6 +30,14 @@ class FirebaseProvider {
     return db.ref(key).set(val);
   }
 
+  async setWithTxn<T>(key: string, txn: (val: T) => void) {
+    return db.ref(key).transaction(txn);
+  }
+
+  async remove<T>(key: string) {
+    return db.ref(key).remove();
+  }
+
   async get<T>(key: string): Promise<T | null> {
     const val = await db.ref(key).get();
 

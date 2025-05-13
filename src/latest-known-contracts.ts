@@ -16,6 +16,7 @@ const logger = getLogger("latest-known-contracts");
 
 const isTestnet = process.env.NETWORK === "testnet";
 const cacheKey = isTestnet ? "cacheTestnet" : "cache";
+const lockKey = cacheKey + `_LOCK`;
 
 type TonTransactionsArchiveProviderParams = {
   address: string;
@@ -61,7 +62,22 @@ async function getTransactions(params: TonTransactionsArchiveProviderParams) {
 
 async function update(verifierIdSha256: Buffer, ipfsProvider: string) {
   logger.debug(`Updating latest verified`);
+  let lockAcquired = false;
   try {
+    const txnResult = await firebaseProvider.setWithTxn<{ timestamp: number }>(lockKey, (lock) => {
+      console.log(lock, "HI");
+      if (lock && Date.now() - lock.timestamp < 40_000) {
+        logger.debug(`Lock acquired by another instance`);
+        return;
+      }
+
+      return { timestamp: Date.now() };
+    });
+
+    lockAcquired = txnResult.committed;
+
+    if (!lockAcquired) return;
+
     let lastTimestamp =
       (await firebaseProvider.readItems<{ timestamp: number }>(cacheKey, 1))?.[0]?.timestamp ??
       null;
@@ -142,6 +158,14 @@ async function update(verifierIdSha256: Buffer, ipfsProvider: string) {
     }
   } catch (e) {
     logger.error(e);
+  } finally {
+    try {
+      if (lockAcquired) {
+        await firebaseProvider.remove(lockKey);
+      }
+    } catch (e) {
+      logger.warn(e);
+    }
   }
 }
 
