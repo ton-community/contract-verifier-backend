@@ -1,14 +1,5 @@
-// import { initializeApp } from "firebase/app";
-// import { getDatabase, ref, set, get, child } from "firebase/database";
 import { getLogger } from "./logger";
 import admin from "firebase-admin";
-
-// const firebaseConfig = {
-//   apiKey: process.env.FIREBASE_API_KEY,
-//   authDomain: process.env.FIREBASE_DOMAIN,
-//   databaseURL: process.env.FIREBASE_DB_URL,
-//   projectId: process.env.FIREBASE_PROJECT_ID,
-// };
 
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT!);
 
@@ -22,6 +13,7 @@ const app = admin.initializeApp({
 const db = app.database();
 const logger = getLogger("firebase-provider");
 
+// We use this for descending order
 const MAX_TS = 9999999999999;
 
 class FirebaseProvider {
