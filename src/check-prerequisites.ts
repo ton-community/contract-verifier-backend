@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { binaryPath } from "./binaries";
-import { getSupportedVersions } from "./fetch-compiler-versions";
+import { supportedVersionsReader } from "./supported-versions-reader";
 import { getLogger } from "./logger";
 
 const logger = getLogger("checkPrereqs");
@@ -23,7 +23,7 @@ export async function checkPrerequisites() {
 
   if (missingEnvVars) throw new Error("Missing env vars: " + missingEnvVars);
 
-  const { funcVersions } = await getSupportedVersions();
+  const { funcVersions } = await supportedVersionsReader.versions();
 
   const missingFiles = funcVersions!
     .map((versionDir: string) => [

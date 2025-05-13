@@ -140,7 +140,7 @@ async function update(verifierIdSha256: Buffer, ipfsProvider: string) {
   }
 }
 
-export async function pollLatestVerified(verifierId: string, ipfsProvider: string) {
+export function pollLatestVerified(verifierId: string, ipfsProvider: string) {
   setInterval(async () => {
     try {
       await update(sha256(verifierId), ipfsProvider);
