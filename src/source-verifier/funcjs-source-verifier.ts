@@ -27,13 +27,6 @@ export class FuncJSSourceVerifier implements SourceVerifier {
     try {
       const module = await DynamicImporter.tryImport("func", compilerSettings.funcVersion);
 
-      console.log({
-        sources: Object.fromEntries(payload.sources.map((p) => [p.path, p.path])),
-        targets: payload.sources
-          .filter((s: FuncSourceToVerify) => s.includeInCommand)
-          .map((s) => s.path),
-      });
-
       const res = await new FuncCompiler(module.object).compileFunc({
         sources: Object.fromEntries(
           await Promise.all(

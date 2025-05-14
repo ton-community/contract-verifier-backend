@@ -3,8 +3,13 @@ import { access } from "fs/promises";
 import path from "path";
 import { promisify } from "util";
 import { supportedVersionsReader } from "./supported-versions-reader";
+import { getLogger } from "./logger";
 
 const execAsync = promisify(exec);
+
+const pendingInstallations: { [v: string]: Promise<any> } = {};
+
+const logger = getLogger("dynamic-importer");
 
 export class DynamicImporter {
   static async tryImport(compiler: "tact" | "func", version: string) {
@@ -31,12 +36,26 @@ export class DynamicImporter {
       npmPackage = "@ton-community/func-js-bin";
     }
 
+    const key = `${compiler}${version}`;
+
     try {
       await access(modulePath);
       return await import(modulePath);
     } catch {
-      console.log(`Version ${version} not found, installing...`);
-      await execAsync(`npm install ${npmPackage}@${version} --prefix ${installPath}`);
+      if (!pendingInstallations[key]) {
+        logger.debug(`Version ${version} not found, installing...`);
+
+        pendingInstallations[key] = execAsync(
+          `npm install ${npmPackage}@${version} --prefix ${installPath}`,
+        ).finally(() => {
+          delete pendingInstallations[key];
+        });
+      } else {
+        logger.debug(`Installation for ${key} already in progress`);
+      }
+
+      await pendingInstallations[key];
+
       return await import(modulePath);
     }
   }
