@@ -38,6 +38,9 @@ export class DynamicImporter {
 
     const key = `${compiler}${version}`;
 
+    // if undefined, will just continue
+    await pendingInstallations[key];
+
     try {
       await access(modulePath);
       return await import(modulePath);
