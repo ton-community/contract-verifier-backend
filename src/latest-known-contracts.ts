@@ -28,10 +28,10 @@ type TonTransactionsArchiveProviderParams = {
 
 async function getTransactions(params: TonTransactionsArchiveProviderParams) {
   const urlParams: any = {
-    address: params.address,
+    account: params.address,
     limit: params.limit.toString(),
     sort: params.sort,
-    include_msg_body: "false",
+    action_type: "contract_deploy",
   };
 
   if (params.startUtime) {
@@ -39,25 +39,25 @@ async function getTransactions(params: TonTransactionsArchiveProviderParams) {
   }
 
   const url =
-    `https://${isTestnet ? "testnet." : ""}toncenter.com/api/index/getTransactionsByAddress?` +
+    `https://${isTestnet ? "testnet." : ""}toncenter.com/api/v3/actions?` +
     new URLSearchParams(urlParams);
 
   const response = await fetch(url);
 
-  logger.debug(url);
+  if (response.status !== 200) {
+    throw new Error(response.statusText);
+  }
 
-  const txns = (await response.json()) as any[];
+  const txns = (await response.json()) as { actions: any[] };
 
   if ("error" in txns) {
     throw new Error(String(txns.error));
   }
 
-  return txns
-    .filter((tx) => tx.out_msgs.length === 1)
-    .map((tx: any) => ({
-      address: tx.out_msgs[0].destination as string,
-      timestamp: Number(tx.utime),
-    }));
+  return txns.actions.map((tx: any) => ({
+    address: tx.details.destination,
+    timestamp: Number(tx.trace_end_utime),
+  }));
 }
 
 async function update(verifierIdSha256: Buffer, ipfsProvider: string) {
@@ -65,7 +65,6 @@ async function update(verifierIdSha256: Buffer, ipfsProvider: string) {
   let lockAcquired = false;
   try {
     const txnResult = await firebaseProvider.setWithTxn<{ timestamp: number }>(lockKey, (lock) => {
-      console.log(lock, "HI");
       if (lock && Date.now() - lock.timestamp < 40_000) {
         logger.debug(`Lock acquired by another instance`);
         return;
@@ -93,8 +92,6 @@ async function update(verifierIdSha256: Buffer, ipfsProvider: string) {
       sort: "asc",
       startUtime: lastTimestamp,
     });
-
-    console.log(txns.length);
 
     const tc = await getTonClient();
 
