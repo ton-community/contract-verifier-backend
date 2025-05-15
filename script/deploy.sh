@@ -1,6 +1,13 @@
 #!/bin/bash
 set -e
 
+ if heroku whoami >/dev/null 2>&1; then
+  echo "Heroku logged in as $(heroku whoami)"
+else
+  echo "You must run 'heroku login' first."
+  exit 1
+fi
+
 if [[ $1 == "testnet" ]]; then
   values=("prod-testnet-1")
   echo "Deploying to tesnet only!"
