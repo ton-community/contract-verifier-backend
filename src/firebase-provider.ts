@@ -10,13 +10,13 @@ class FirebaseProvider {
   db: admin.database.Database;
 
   constructor() {
-    // const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT!);
-    // serviceAccount.private_key = serviceAccount.private_key.replaceAll("\\n", "\n");
-    // const app = admin.initializeApp({
-    //   credential: admin.credential.cert(serviceAccount),
-    //   databaseURL: process.env.FIREBASE_DB_URL,
-    // });
-    // this.db = app.database();
+    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT!);
+    serviceAccount.private_key = serviceAccount.private_key.replaceAll("\\n", "\n");
+    const app = admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+      databaseURL: process.env.FIREBASE_DB_URL,
+    });
+    this.db = app.database();
   }
 
   async addForDescendingOrder<T>(key: string, data: T) {
