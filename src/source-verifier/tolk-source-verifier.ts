@@ -6,7 +6,7 @@ import {
   TolkCliCompileSettings,
   TolkSourceToVerify,
 } from "../types";
-import { getSupportedVersions } from "../fetch-compiler-versions";
+import { supportedVersionsReader } from "../supported-versions-reader";
 import type { runTolkCompiler as CompileFunction } from "tolk-0.12.0";
 import { readFileSync } from "fs";
 import { timeoutPromise } from "../utils";
@@ -32,7 +32,7 @@ export class TolkSourceVerifier implements SourceVerifier {
       if (payload.compiler !== "tolk") {
         throw "Invalid compiler type passed as tolk:" + payload.compiler;
       }
-      const { tolkVersions } = await getSupportedVersions();
+      const { tolkVersions } = await supportedVersionsReader.versions();
 
       if (!tolkVersions.includes(tolkCompilerOpts.tolkVersion)) {
         throw `Tolk version ${tolkCompilerOpts.tolkVersion} is not supported!`;

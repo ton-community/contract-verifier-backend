@@ -7,6 +7,7 @@ class SupportedVersionsReader {
   private _versions: {
     funcVersions: string[];
     tactVersions: string[];
+    tolkVersions: string[];
   } | null = null;
 
   private fetchPromise: Promise<void> | null = null;
@@ -34,6 +35,7 @@ class SupportedVersionsReader {
             this._versions = {
               funcVersions: data.funcVersions,
               tactVersions: data.tactVersions,
+              tolkVersions: data.tolkVersions
             };
           },
           {
