@@ -4,6 +4,7 @@
     "@babel/preset-env": "^7.18.6",
     "@orbs-network/ton-access": "^2.3.3",
     "@ton-community/contract-verifier-sdk": "^1.1.2",
+    "@ton-community/func-js": "^0.9.1",
     "async": "^3.2.4",
     "base64url": "^3.0.1",
     "bigint-buffer": "^1.1.5",

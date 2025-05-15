@@ -16,12 +16,16 @@ import { IpfsCodeStorageProvider } from "./ipfs-code-storage-provider";
 import rateLimit from "express-rate-limit";
 import { checkPrerequisites } from "./check-prerequisites";
 import { FiftSourceVerifier } from "./source-verifier/fift-source-verifier";
-import { FuncSourceVerifier, specialCharsRegex } from "./source-verifier/func-source-verifier";
+import {
+  LegacyFuncSourceVerifier,
+  specialCharsRegex,
+} from "./source-verifier/func-source-verifier";
 import { TactSourceVerifier, FileSystem } from "./source-verifier/tact-source-verifier";
 import { TonReaderClientImpl } from "./ton-reader-client";
 import { getLatestVerified, pollLatestVerified } from "./latest-known-contracts";
 import { DeployController } from "./deploy-controller";
 import { getLogger } from "./logger";
+import { FuncJSSourceVerifier } from "./source-verifier/funcjs-source-verifier";
 
 const logger = getLogger("server");
 
@@ -141,7 +145,10 @@ app.get("/hc", (req, res) => {
   const controller = new Controller(
     new IpfsCodeStorageProvider(process.env.INFURA_ID!, process.env.INFURA_SECRET!),
     {
-      func: new FuncSourceVerifier(),
+      func:
+        process.env.LEGACY_FUNC_COMPILER === "true"
+          ? new LegacyFuncSourceVerifier()
+          : new FuncJSSourceVerifier(),
       fift: new FiftSourceVerifier(),
       tact: new TactSourceVerifier(fileSystem),
     },
