@@ -10,6 +10,7 @@ import { supportedVersionsReader } from "../supported-versions-reader";
 import type { runTolkCompiler as CompileFunction } from "tolk-0.12.0";
 import { readFileSync } from "fs";
 import { timeoutPromise } from "../utils";
+import { DynamicImporter } from "../dynamic-importer";
 
 // Matches tolk fsReadCallback. Synchronous for whatever reason??
 export type TolkVerifierReadCallback = (path: string) => string;
@@ -32,11 +33,6 @@ export class TolkSourceVerifier implements SourceVerifier {
       if (payload.compiler !== "tolk") {
         throw "Invalid compiler type passed as tolk:" + payload.compiler;
       }
-      const { tolkVersions } = await supportedVersionsReader.versions();
-
-      if (!tolkVersions.includes(tolkCompilerOpts.tolkVersion)) {
-        throw `Tolk version ${tolkCompilerOpts.tolkVersion} is not supported!`;
-      }
 
       const entry = payload.sources.filter((s: TolkSourceToVerify) => s.isEntrypoint);
 
@@ -49,7 +45,7 @@ export class TolkSourceVerifier implements SourceVerifier {
 
       const entryPath = path.join(payload.tmpDir, entry[0].path);
 
-      const tolkModule = await import(`tolk-${tolkCompilerOpts.tolkVersion}`);
+      const tolkModule = await DynamicImporter.tryImport("tolk", tolkCompilerOpts.tolkVersion);
 
       const tolkCompile: typeof CompileFunction = tolkModule.runTolkCompiler;
 
