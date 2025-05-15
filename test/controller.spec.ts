@@ -98,6 +98,7 @@ function makeController(keypair: tweetnacl.SignKeyPair): Controller {
       func: stubSourceVerifier,
       fift: stubSourceVerifier,
       tact: stubSourceVerifier,
+      tolk: stubSourceVerifier,
     },
     {
       privateKey: Buffer.from(keypair.secretKey).toString("base64"),

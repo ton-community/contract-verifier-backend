@@ -1,4 +1,4 @@
-export type Compiler = "func" | "fift" | "tact";
+export type Compiler = "func" | "fift" | "tolk" | "tact";
 
 import { FuncCompilerVersion } from "@ton-community/contract-verifier-sdk";
 
@@ -23,6 +23,10 @@ export type FiftCliCompileSettings = {
   commandLine: string;
 };
 
+export type TolkCliCompileSettings = {
+  tolkVersion: string;
+};
+
 export type TactCliCompileSettings = {};
 
 export type FuncSourceCompileResult = {
@@ -37,6 +41,10 @@ export type FiftSourceCompileResult = {
   filename: string;
 };
 
+export type TolkSourceCompileResult = {
+  filename: string;
+};
+
 export type TactSourceCompileResult = {
   filename: string;
 };
@@ -45,8 +53,17 @@ export type CompileResult = {
   result: "similar" | "not_similar" | "compile_error" | "unknown_error";
   error: string | null;
   hash: string | null;
-  compilerSettings: FuncCliCompileSettings | FiftCliCompileSettings | TactCliCompileSettings;
-  sources: (FuncSourceCompileResult | FiftSourceCompileResult | TactSourceCompileResult)[];
+  compilerSettings:
+    | FuncCliCompileSettings
+    | FiftCliCompileSettings
+    | TolkCliCompileSettings
+    | TactCliCompileSettings;
+  sources: (
+    | FuncSourceCompileResult
+    | FiftSourceCompileResult
+    | TolkSourceCompileResult
+    | TactSourceCompileResult
+  )[];
 };
 
 type Path = string;
@@ -63,9 +80,17 @@ export type FuncSourceToVerify = SourceToVerify & {
   hasIncludeDirectives: boolean;
 };
 
+export type TolkSourceToVerify = SourceToVerify & {
+  isEntrypoint: boolean;
+};
+
 export type CompileOptions = {
   compiler: Compiler;
-  compilerSettings: FuncCliCompileSettings | FiftCliCompileSettings | TactCliCompileSettings;
+  compilerSettings:
+    | FuncCliCompileSettings
+    | FiftCliCompileSettings
+    | TolkCliCompileSettings
+    | TactCliCompileSettings;
 };
 
 export type SourceVerifyPayload = CompileOptions & {
@@ -83,6 +108,11 @@ export type SourceItem = {
   verificationDate: number;
   sources: ({
     url: string;
-  } & (FuncSourceCompileResult | TactSourceCompileResult | FiftSourceCompileResult))[];
+  } & (
+    | FuncSourceCompileResult
+    | TactSourceCompileResult
+    | TolkSourceCompileResult
+    | FiftSourceCompileResult
+  ))[];
   knownContractAddress: string;
 };
