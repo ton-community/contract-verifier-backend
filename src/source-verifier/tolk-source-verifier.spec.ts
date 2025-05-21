@@ -6,6 +6,7 @@ import { randomBytes } from "tweetnacl";
 import { TolkSourceToVerify } from "../types";
 import { mkdir } from "fs/promises";
 import { readFileSync } from "fs";
+import { supportedVersionsReader } from "../supported-versions-reader";
 
 const counterData = `
 const OP_INCREASE = 0x7e8764ef;  // arbitrary 32-bit number, equal to OP_INCREASE in wrappers/CounterContract.ts
@@ -79,6 +80,22 @@ get initialId(): int {
     return ctxID;
 }`;
 
+jest.mock("../supported-versions-reader", () => ({
+  supportedVersionsReader: {
+    versions: jest.fn(),
+  },
+}));
+
+const versionsMock = supportedVersionsReader.versions as jest.Mock;
+
+beforeEach(() => {
+  versionsMock.mockResolvedValue({
+    funcVersions: [],
+    tactVersions: [],
+    tolkVersions: ["0.12.0"],
+  });
+});
+
 describe("Tolk source verifier", () => {
   let tolkVersions = ["0.12.0"];
 
@@ -127,10 +144,12 @@ describe("Tolk source verifier", () => {
         tmpDir: "",
       });
 
-      expect(verifyRes.result == "similar").toBe(true);
+      expect(verifyRes.error).toBeNull();
+      expect(verifyRes.result).toEqual("similar");
       expect(verifyRes.hash).toEqual(resHash);
     }
   });
+
   it("tolk should compile and match expected hash with default readFile handler", async () => {
     const sourceName = "counter.tolk";
     const testSource = counterData + counterMain + counterGetters;
@@ -170,10 +189,12 @@ describe("Tolk source verifier", () => {
         tmpDir,
       });
 
-      expect(verifyRes.result == "similar").toBe(true);
+      expect(verifyRes.error).toBeNull();
+      expect(verifyRes.result).toEqual("similar");
       expect(verifyRes.hash).toEqual(resHash);
     }
   });
+
   it("verifier should reject non-matching hash", async () => {
     const sourceName = "counter.tolk";
     const testSource = counterData + counterMain + counterGetters;
@@ -213,6 +234,7 @@ describe("Tolk source verifier", () => {
         tmpDir: "",
       });
 
+      expect(verifyRes.error).toBeNull();
       expect(verifyRes.result).toBe("not_similar");
     }
   });
@@ -273,7 +295,8 @@ describe("Tolk source verifier", () => {
         tmpDir: "",
       });
 
-      expect(verifyRes.result == "similar").toBe(true);
+      expect(verifyRes.error).toBeNull();
+      expect(verifyRes.result).toEqual("similar");
       expect(verifyRes.hash).toEqual(resHash);
     }
   });
@@ -338,7 +361,8 @@ describe("Tolk source verifier", () => {
         tmpDir,
       });
 
-      expect(verifyRes.result == "similar").toBe(true);
+      expect(verifyRes.error).toBeNull();
+      expect(verifyRes.result).toEqual("similar");
       expect(verifyRes.hash).toEqual(resHash);
     }
   });

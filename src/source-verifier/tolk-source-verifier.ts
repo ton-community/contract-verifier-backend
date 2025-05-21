@@ -11,9 +11,12 @@ import type { runTolkCompiler as CompileFunction } from "tolk-0.12.0";
 import { readFileSync } from "fs";
 import { timeoutPromise } from "../utils";
 import { DynamicImporter } from "../dynamic-importer";
+import { getLogger } from "../logger";
 
 // Matches tolk fsReadCallback. Synchronous for whatever reason??
 export type TolkVerifierReadCallback = (path: string) => string;
+
+const logger = getLogger("tolk-verifier");
 
 export class TolkSourceVerifier implements SourceVerifier {
   readFile: TolkVerifierReadCallback;
@@ -95,6 +98,7 @@ export class TolkSourceVerifier implements SourceVerifier {
         }),
       };
     } catch (e) {
+      logger.error(e);
       return {
         result: "unknown_error",
         compilerSettings: tolkCompilerOpts,
