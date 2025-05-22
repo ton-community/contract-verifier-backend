@@ -12,7 +12,7 @@ const pendingInstallations: { [v: string]: Promise<any> } = {};
 const logger = getLogger("dynamic-importer");
 
 export class DynamicImporter {
-  static async tryImport(compiler: "tact" | "func", version: string) {
+  static async tryImport(compiler: "tact" | "func" | "tolk", version: string) {
     const versions = await supportedVersionsReader.versions();
 
     let installPath, modulePath, npmPackage: string;
@@ -25,7 +25,7 @@ export class DynamicImporter {
 
       modulePath = path.join(installPath, "node_modules", "@tact-lang", "compiler");
       npmPackage = "@tact-lang/compiler";
-    } else {
+    } else if (compiler === "func") {
       if (!versions.funcVersions.includes(version)) {
         throw new Error(`Unsupported func version:${version}`);
       }
@@ -34,6 +34,16 @@ export class DynamicImporter {
 
       modulePath = path.join(installPath, "node_modules", "@ton-community", "func-js-bin");
       npmPackage = "@ton-community/func-js-bin";
+    } else if (compiler === "tolk") {
+      if (!versions.tolkVersions.includes(version)) {
+        throw new Error(`Unsupported tolk version:${version}`);
+      }
+
+      installPath = path.resolve(process.cwd(), "compilers", `tolk-compiler-${version}`);
+      modulePath = path.join(installPath, "node_modules", "@ton", "tolk-js");
+      npmPackage = "@ton/tolk-js";
+    } else {
+      throw new Error(`Compiler ${compiler} is not yet supported`);
     }
 
     const key = `${compiler}${version}`;

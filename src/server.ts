@@ -21,6 +21,7 @@ import {
   specialCharsRegex,
 } from "./source-verifier/func-source-verifier";
 import { TactSourceVerifier, FileSystem } from "./source-verifier/tact-source-verifier";
+import { TolkSourceVerifier } from "./source-verifier/tolk-source-verifier";
 import { TonReaderClientImpl } from "./ton-reader-client";
 import { getLatestVerified, pollLatestVerified } from "./latest-known-contracts";
 import { DeployController } from "./deploy-controller";
@@ -150,6 +151,7 @@ app.get("/hc", (req, res) => {
           ? new LegacyFuncSourceVerifier()
           : new FuncJSSourceVerifier(),
       fift: new FiftSourceVerifier(),
+      tolk: new TolkSourceVerifier(),
       tact: new TactSourceVerifier(fileSystem),
     },
     {
