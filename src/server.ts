@@ -16,13 +16,17 @@ import { IpfsCodeStorageProvider } from "./ipfs-code-storage-provider";
 import rateLimit from "express-rate-limit";
 import { checkPrerequisites } from "./check-prerequisites";
 import { FiftSourceVerifier } from "./source-verifier/fift-source-verifier";
-import { FuncSourceVerifier, specialCharsRegex } from "./source-verifier/func-source-verifier";
+import {
+  LegacyFuncSourceVerifier,
+  specialCharsRegex,
+} from "./source-verifier/func-source-verifier";
 import { TactSourceVerifier, FileSystem } from "./source-verifier/tact-source-verifier";
+import { TolkSourceVerifier } from "./source-verifier/tolk-source-verifier";
 import { TonReaderClientImpl } from "./ton-reader-client";
-import { getLatestVerified } from "./latest-known-contracts";
+import { getLatestVerified, pollLatestVerified } from "./latest-known-contracts";
 import { DeployController } from "./deploy-controller";
-import { getSupportedVersions } from "./fetch-compiler-versions";
 import { getLogger } from "./logger";
+import { FuncJSSourceVerifier } from "./source-verifier/funcjs-source-verifier";
 
 const logger = getLogger("server");
 
@@ -142,8 +146,12 @@ app.get("/hc", (req, res) => {
   const controller = new Controller(
     new IpfsCodeStorageProvider(process.env.INFURA_ID!, process.env.INFURA_SECRET!),
     {
-      func: new FuncSourceVerifier(),
+      func:
+        process.env.LEGACY_FUNC_COMPILER === "true"
+          ? new LegacyFuncSourceVerifier()
+          : new FuncJSSourceVerifier(),
       fift: new FiftSourceVerifier(),
+      tolk: new TolkSourceVerifier(),
       tact: new TactSourceVerifier(fileSystem),
     },
     {
@@ -155,9 +163,8 @@ app.get("/hc", (req, res) => {
     new TonReaderClientImpl(),
   );
 
-  // Not awaiting on purpose, otherwise this may take too much time.
   if (process.env.NODE_ENV === "production")
-    getLatestVerified(process.env.VERIFIER_ID!, process.env.IPFS_PROVIDER!);
+    pollLatestVerified(process.env.VERIFIER_ID!, process.env.IPFS_PROVIDER!);
 
   app.post(
     "/source",
@@ -221,12 +228,10 @@ app.get("/hc", (req, res) => {
     },
   );
 
-  await getSupportedVersions();
-
   if (process.env.NODE_ENV === "production") checkPrerequisites();
 
   app.get("/latestVerified", async (req, res) => {
-    res.json(await getLatestVerified(process.env.VERIFIER_ID!, process.env.IPFS_PROVIDER!));
+    res.json(await getLatestVerified());
   });
 
   app.use(function (err: any, req: any, res: any, next: any) {

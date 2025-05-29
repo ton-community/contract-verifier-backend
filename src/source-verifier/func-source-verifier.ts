@@ -72,7 +72,7 @@ async function compileFuncToCodeHash(
   };
 }
 
-export class FuncSourceVerifier implements SourceVerifier {
+export class LegacyFuncSourceVerifier implements SourceVerifier {
   async verify(payload: SourceVerifyPayload): Promise<CompileResult> {
     let funcCmd: string | null = null;
     const compilerSettings = payload.compilerSettings as FuncCliCompileSettings;

@@ -4,6 +4,7 @@ import {
   FiftSourceCompileResult,
   FuncSourceCompileResult,
   TactSourceCompileResult,
+  TolkSourceCompileResult,
 } from "./types";
 import path from "path";
 import tweetnacl from "tweetnacl";
@@ -89,7 +90,13 @@ export class Controller {
 
     // Upload sources to IPFS
     const sourcesToUpload = compileResult.sources.map(
-      (s: FuncSourceCompileResult | FiftSourceCompileResult | TactSourceCompileResult) => ({
+      (
+        s:
+          | FuncSourceCompileResult
+          | FiftSourceCompileResult
+          | TolkSourceCompileResult
+          | TactSourceCompileResult,
+      ) => ({
         path: path.join(verificationPayload.tmpDir, s.filename),
         name: s.filename,
       }),

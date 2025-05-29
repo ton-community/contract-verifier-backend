@@ -22,7 +22,7 @@ export async function getTonClient() {
     network: process.env.NETWORK === "testnet" ? "testnet" : "mainnet",
   });
   console.log("Using endpoint:" + endpoint);
-  return new TonClient({ endpoint });
+  return new TonClient({ endpoint, apiKey: process.env.TON_ACCESS_API_KEY });
 }
 
 export function createNullValue(): DictionaryValue<null> {
