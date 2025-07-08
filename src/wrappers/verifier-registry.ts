@@ -10,7 +10,7 @@ import {
   Dictionary,
   DictionaryValue,
   Slice,
-} from "ton-core";
+} from "@ton/core";
 
 export type RegistryData = {
   verifiers: Map<bigint, VerifierConfig>;
@@ -91,7 +91,10 @@ export function buildRegistryDataCell(data: RegistryData, num?: number) {
 }
 
 export class VerifierRegistry implements Contract {
-  constructor(readonly address: Address, readonly init?: { code: Cell; data: Cell }) {}
+  constructor(
+    readonly address: Address,
+    readonly init?: { code: Cell; data: Cell },
+  ) {}
 
   static createFromAddress(address: Address) {
     return new VerifierRegistry(address);

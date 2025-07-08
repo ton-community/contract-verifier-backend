@@ -4,7 +4,7 @@ import { CodeStorageProvider, FileUploadSpec } from "../src/ipfs-code-storage-pr
 import { of as ipfsHash } from "ipfs-only-hash";
 import tweetnacl from "tweetnacl";
 import { CompileResult, SourceVerifier, SourceVerifyPayload } from "../src/types";
-import { beginCell, Cell, Address, Slice } from "ton";
+import { beginCell, Cell, Address, Slice } from "@ton/core";
 import { TonReaderClient, VerifierConfig } from "../src/ton-reader-client";
 import { sha256 } from "../src/utils";
 import Prando from "prando";

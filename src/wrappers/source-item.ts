@@ -1,7 +1,10 @@
-import { Address, beginCell, Cell, Contract, ContractProvider, Sender, SendMode } from "ton-core";
+import { Address, beginCell, Cell, Contract, ContractProvider, Sender, SendMode } from "@ton/core";
 
 export class SourceItem implements Contract {
-  constructor(readonly address: Address, readonly init?: { code: Cell; data: Cell }) {}
+  constructor(
+    readonly address: Address,
+    readonly init?: { code: Cell; data: Cell },
+  ) {}
 
   static createFromAddress(address: Address) {
     return new SourceItem(address);

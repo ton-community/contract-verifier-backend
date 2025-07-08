@@ -1,8 +1,7 @@
-import { Address, Cell, Dictionary, TonClient } from "ton";
-import { DictionaryValue } from "ton-core";
+import { Address, Dictionary, DictionaryValue } from "@ton/core";
 import { toBigIntBE, toBufferBE } from "bigint-buffer";
 import { sha256 } from "./utils";
-import { getHttpEndpoint } from "@orbs-network/ton-access";
+import { LiteClient, LiteRoundRobinEngine, LiteSingleEngine } from "ton-lite-client";
 import { ContractVerifier } from "@ton-community/contract-verifier-sdk";
 import { VerifierRegistry } from "./wrappers/verifier-registry";
 import { SourcesRegistry } from "./wrappers/sources-registry";
@@ -17,12 +16,38 @@ export interface TonReaderClient {
   getVerifierConfig(verifierId: string, verifierRegistryAddress: string): Promise<VerifierConfig>;
 }
 
+function intToIP(int: number) {
+  var part1 = int & 255;
+  var part2 = (int >> 8) & 255;
+  var part3 = (int >> 16) & 255;
+  var part4 = (int >> 24) & 255;
+
+  return part4 + "." + part3 + "." + part2 + "." + part1;
+}
+
 export async function getTonClient() {
-  const endpoint = await getHttpEndpoint({
-    network: process.env.NETWORK === "testnet" ? "testnet" : "mainnet",
-  });
-  console.log("Using endpoint:" + endpoint);
-  return new TonClient({ endpoint, apiKey: process.env.TON_ACCESS_API_KEY });
+  const isTestnet = process.env.NETWORK === "testnet";
+  const configUrl = isTestnet
+    ? "https://ton.org/testnet-global.config.json"
+    : "https://ton.org/global.config.json";
+
+  console.log("Using config URL:" + configUrl);
+
+  const response = await fetch(configUrl);
+  const config = await response.json();
+
+  const engines: LiteSingleEngine[] = [];
+
+  for (const server of config.liteservers) {
+    const engine = new LiteSingleEngine({
+      host: `tcp://${intToIP(server.ip)}:${server.port}`,
+      publicKey: Buffer.from(server.id.key, "base64"),
+    });
+    engines.push(engine);
+  }
+
+  const engine = new LiteRoundRobinEngine(engines);
+  return new LiteClient({ engine });
 }
 
 export function createNullValue(): DictionaryValue<null> {

@@ -1,7 +1,7 @@
 import { FuncCompiler } from "@ton-community/func-js";
 import { readFile } from "fs/promises";
 import path from "path";
-import { Cell } from "ton-core";
+import { Cell } from "@ton/core";
 import { DynamicImporter } from "../dynamic-importer";
 import {
   CompileResult,
