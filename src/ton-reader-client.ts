@@ -25,7 +25,23 @@ function intToIP(int: number) {
   return part4 + "." + part3 + "." + part2 + "." + part1;
 }
 
-export async function getTonClient() {
+let clientPromise: Promise<LiteClient> | null = null;
+
+export async function getTonClient(): Promise<LiteClient> {
+  if (clientPromise) {
+    return clientPromise;
+  }
+
+  try {
+    clientPromise = createClient();
+    return await clientPromise;
+  } catch (error) {
+    clientPromise = null;
+    throw error;
+  }
+}
+
+async function createClient(): Promise<LiteClient> {
   const isTestnet = process.env.NETWORK === "testnet";
   const configUrl = isTestnet
     ? "https://ton.org/testnet-global.config.json"
@@ -34,7 +50,14 @@ export async function getTonClient() {
   console.log("Using config URL:" + configUrl);
 
   const response = await fetch(configUrl);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch TON config: ${response.status}`);
+  }
+
   const config = await response.json();
+  if (!config.liteservers?.length) {
+    throw new Error("No liteservers found in config");
+  }
 
   const engines: LiteSingleEngine[] = [];
 
