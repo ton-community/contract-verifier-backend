@@ -1,4 +1,4 @@
-import { Address, Cell, Slice } from "ton";
+import { Cell, Slice } from "@ton/core";
 import tweetnacl from "tweetnacl";
 import { DEPLOY_SOURCE_OP, FORWARD_MESSAGE_OP } from "./cell-builders";
 import { VerifierConfig } from "./ton-reader-client";
@@ -148,7 +148,7 @@ export function validateMessageCell(
     throw new Error("Invalid operation");
   }
 
-  const queryId = slice.loadUint(64);
+  const queryId = slice.loadUintBig(64);
 
   const signedCell = slice.loadRef();
 

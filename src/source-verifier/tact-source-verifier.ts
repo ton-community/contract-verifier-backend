@@ -3,7 +3,7 @@ import semver from "semver";
 import type { verify as VerifyFunctionLegacy } from "tact-1.4.0";
 import { Logger, PackageFileFormat } from "tact-1.4.1";
 import type { verify as VerifyFunction } from "tact-1.6.7";
-import { Cell } from "ton";
+import { Cell } from "@ton/core";
 import { DynamicImporter } from "../dynamic-importer";
 import { getLogger } from "../logger";
 import { CompileResult, SourceVerifier, SourceVerifyPayload } from "../types";

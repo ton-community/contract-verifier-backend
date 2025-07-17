@@ -1,4 +1,4 @@
-import { Address, beginCell, Cell } from "ton";
+import { Address, beginCell, Cell } from "@ton/core";
 import tweetnacl from "tweetnacl";
 import { toBigIntBE } from "bigint-buffer";
 export const DEPLOY_SOURCE_OP = 1002;

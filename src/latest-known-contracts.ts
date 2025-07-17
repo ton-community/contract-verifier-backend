@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-import { Address } from "ton";
+import { Address } from "@ton/core";
 import axios from "axios";
 import async from "async";
 import { sha256 } from "./utils";
