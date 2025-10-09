@@ -43,6 +43,7 @@ export type FiftSourceCompileResult = {
 
 export type TolkSourceCompileResult = {
   filename: string;
+  isEntrypoint: boolean;
 };
 
 export type TactSourceCompileResult = {

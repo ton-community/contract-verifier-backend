@@ -93,8 +93,11 @@ export class TolkSourceVerifier implements SourceVerifier {
         result: base64Hash === payload.knownContractHash ? "similar" : "not_similar",
         error: null,
         compilerSettings: tolkCompilerOpts,
-        sources: payload.sources.map((s) => {
-          return { filename: s.path };
+        sources: payload.sources.map((s: TolkSourceToVerify) => {
+          return {
+            filename: s.path,
+            isEntrypoint: s.isEntrypoint
+          };
         }),
       };
     } catch (e) {
