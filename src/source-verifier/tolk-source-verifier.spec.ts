@@ -7,78 +7,87 @@ import { TolkSourceToVerify } from "../types";
 import { mkdir } from "fs/promises";
 import { readFileSync } from "fs";
 import { supportedVersionsReader } from "../supported-versions-reader";
+import { DynamicImporter } from "../dynamic-importer";
 
 const counterData = `
-const OP_INCREASE = 0x7e8764ef;  // arbitrary 32-bit number, equal to OP_INCREASE in wrappers/CounterContract.ts
+tolk 1.0
 
-// storage variables
-
-// id is required to be able to create different instances of counters
-// since addresses in TON depend on the initial state of the contract
-global ctxID: int;
-global ctxCounter: int;
-
-// loadData populates storage variables from persistent storage
-fun loadData() {
-    var ds = contract.getData().beginParse();
-
-    ctxID = ds.loadUint(32);
-    ctxCounter = ds.loadUint(32);
-
-    ds.assertEnd();
+// this struct defines storage layout of the contract
+struct Storage {
+    id: uint32  // required to allow multiple independent counter instances, since the contract address depends on its initial state
+    counter: uint32 // the current counter value
+}
+// load contract data from the persistent storage
+fun Storage.load() {
+    return Storage.fromCell(contract.getData())
 }
 
-// saveData stores storage variables as a cell into persistent storage
-fun saveData() {
-    contract.setData(
-        beginCell()
-        .storeUint(ctxID, 32)
-        .storeUint(ctxCounter, 32)
-        .endCell()
-    );
-}`;
+// save contract data into the persistent storage
+fun Storage.save(self) {
+    contract.setData(self.toCell())
+}
+
+// the struct uses a 32-bit opcode prefix for message identification
+struct (0x7e8764ef) IncreaseCounter {
+    queryId: uint64  // query id, typically included in messages
+    increaseBy: uint32
+}
+
+struct (0x3a752f06) ResetCounter {
+    queryId: uint64
+}
+// using unions to represent available messages
+// this allows processing them with pattern matching
+type AllowedMessage = IncreaseCounter | ResetCounter
+`;
 
 const counterMain = `
-// onInternalMessage is the main entrypoint; it's called when a contract receives an internal message from other contracts
-fun onInternalMessage(myBalance: int, msgValue: int, msgFull: cell, msgBody: slice) {
-    if (msgBody.isEnd()) { // ignore all empty messages
-        return;
+// the main entrypoint: called when a contract receives an message from other contracts
+fun onInternalMessage(in: InMessage) {
+    // use lazy to defer loading fields until they are accessed
+    val msg = lazy AllowedMessage.fromSlice(in.body);
+
+    match (msg) {
+        IncreaseCounter => {
+            // load contract storage lazily (efficient for large or partial reads/updates)
+            var storage = lazy Storage.load();
+
+            storage.counter += msg.increaseBy;
+            storage.save();
+        }
+
+        ResetCounter => {
+            var storage = lazy Storage.load();
+
+            storage.counter = 0;
+            storage.save();
+        }
+
+        else => {
+            // ignore empty messages, "wrong opcode" for others
+            assert (in.body.isEmpty()) throw 0xFFFF
+        }
     }
+}
 
-    var cs: slice = msgFull.beginParse();
-    val flags = cs.loadMessageFlags();
-    if (isMessageBounced(flags)) { // ignore all bounced messages
-        return;
-    }
-
-    loadData(); // here we populate the storage variables
-
-    val op = msgBody.loadMessageOp(); // by convention, the first 32 bits of incoming message is the op
-    val queryID = msgBody.loadMessageQueryId(); // also by convention, the next 64 bits contain the "query id", although this is not always the case
-
-    if (op == OP_INCREASE) {
-        val increaseBy = msgBody.loadUint(32);
-        ctxCounter += increaseBy;
-        saveData();
-        return;
-    }
-
-    throw 0xffff; // if the message contains an op that is not known to this contract, we throw
-}`;
+// a handler for bounced messages (not used here, may be ommited)
+fun onBouncedMessage(in: InMessageBounced) {
+}
+`;
 
 const counterGetters = `
 // get methods are a means to conveniently read contract data using, for example, HTTP APIs
 // note that unlike in many other smart contract VMs, get methods cannot be called by other contracts
-
-get currentCounter(): int {
-    loadData();
-    return ctxCounter;
+get fun currentCounter(): int {
+    val storage = lazy Storage.load();
+    return storage.counter;
 }
 
-get initialId(): int {
-    loadData();
-    return ctxID;
-}`;
+get fun initialId(): int {
+    val storage = lazy Storage.load();
+    return storage.id;
+}
+`;
 
 jest.mock("../supported-versions-reader", () => ({
   supportedVersionsReader: {
@@ -88,16 +97,19 @@ jest.mock("../supported-versions-reader", () => ({
 
 const versionsMock = supportedVersionsReader.versions as jest.Mock;
 
+const importTolk = async (version: string) => {
+  return await DynamicImporter.tryImport("tolk", version);
+};
 beforeEach(() => {
   versionsMock.mockResolvedValue({
     funcVersions: [],
     tactVersions: [],
-    tolkVersions: ["0.12.0"],
+    tolkVersions: ["1.0.0", "1.1.0"],
   });
 });
 
 describe("Tolk source verifier", () => {
-  let tolkVersions = ["0.12.0"];
+  let tolkVersions = ["1.0.0", "1.1.0"];
 
   it("tolk should compile and match expected hash", async () => {
     const sourceName = "counter.tolk";
@@ -110,7 +122,7 @@ describe("Tolk source verifier", () => {
     });
 
     for (let tolkVersion of tolkVersions) {
-      const runTolkCompiler = (await import(`tolk-${tolkVersion}`)).runTolkCompiler;
+      const runTolkCompiler = (await importTolk(tolkVersion)).runTolkCompiler;
       expect(runTolkCompiler).not.toBeUndefined();
 
       const compileRes = await runTolkCompiler({
@@ -118,6 +130,7 @@ describe("Tolk source verifier", () => {
         fsReadCallback: (path: string) => testSource,
       });
       if (compileRes.status !== "ok") {
+        console.log(compileRes);
         throw "Failed to compile";
       }
 
@@ -161,7 +174,7 @@ describe("Tolk source verifier", () => {
     await writeFile(outPath, testSource, { encoding: "utf8" });
 
     for (let tolkVersion of tolkVersions) {
-      const runTolkCompiler = (await import(`tolk-${tolkVersion}`)).runTolkCompiler;
+      const runTolkCompiler = (await importTolk(tolkVersion)).runTolkCompiler;
       expect(runTolkCompiler).not.toBeUndefined();
 
       const compileRes = await runTolkCompiler({
@@ -206,7 +219,7 @@ describe("Tolk source verifier", () => {
     });
 
     for (let tolkVersion of tolkVersions) {
-      const runTolkCompiler = (await import(`tolk-${tolkVersion}`)).runTolkCompiler;
+      const runTolkCompiler = (await importTolk(tolkVersion)).runTolkCompiler;
       expect(runTolkCompiler).not.toBeUndefined();
 
       const compileRes = await runTolkCompiler({
@@ -266,7 +279,7 @@ describe("Tolk source verifier", () => {
     const tolkVerifier = new TolkSourceVerifier(readCb);
 
     for (let tolkVersion of tolkVersions) {
-      const runTolkCompiler = (await import(`tolk-${tolkVersion}`)).runTolkCompiler;
+      const runTolkCompiler = (await importTolk(tolkVersion)).runTolkCompiler;
       expect(runTolkCompiler).not.toBeUndefined();
 
       const compileRes = await runTolkCompiler({
@@ -304,14 +317,14 @@ describe("Tolk source verifier", () => {
   it("verifier should handle multiple files scenario with default readFile callback", async () => {
     const mainSource = `
         import "import/data.tolk";
-        import "import/getters.tolk";
+      import "import/getters.tolk";
 
-        ${counterMain}`;
+        ${counterMain} `;
     const gettersSource = `
-        import "data.tolk";
+      import "data.tolk";
 
         ${counterGetters}
-        `;
+      `;
 
     const sourceName = "counter.tolk";
 
@@ -332,7 +345,7 @@ describe("Tolk source verifier", () => {
     const tolkVerifier = new TolkSourceVerifier(); // Default readFile handler
 
     for (let tolkVersion of tolkVersions) {
-      const runTolkCompiler = (await import(`tolk-${tolkVersion}`)).runTolkCompiler;
+      const runTolkCompiler = (await importTolk(tolkVersion)).runTolkCompiler;
       expect(runTolkCompiler).not.toBeUndefined();
 
       const compileRes = await runTolkCompiler({

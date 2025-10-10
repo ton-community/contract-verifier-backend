@@ -236,8 +236,10 @@ app.get("/hc", (req, res) => {
 
   app.use(function (err: any, req: any, res: any, next: any) {
     logger.error(err); // Log error message in our server's console
-    if (!err.statusCode) err.statusCode = 500; // If err has no specified error code, set error code to 'Internal Server Error (500)'
-    res.status(err.statusCode).send(err); // All HTTP requests must have a response, so let's send back an error with its status
+    // We don't want to mutate actuall error message
+    const statusCode = err.statusCode || 500; // If err has no specified error code, set error code to 'Internal Server Error (500)'
+    const errorMessage = err.message || err.toString() || "Unknown error";
+    res.status(statusCode).send({ statusCode, message: errorMessage }); // All HTTP requests must have a response, so let's send back an error with its status
   });
 
   app.listen(port, () => {
