@@ -136,15 +136,20 @@ app.get("/hc", (req, res) => {
   };
 
   const deployController = new DeployController(
-    new IpfsCodeStorageProvider(
-      process.env.TACT_DEPLOYER_INFURA_ID!,
-      process.env.TACT_DEPLOYER_INFURA_SECRET!,
-    ),
+    new IpfsCodeStorageProvider({
+      type: "basic",
+      username: process.env.TACT_DEPLOYER_INFURA_ID!,
+      password: process.env.TACT_DEPLOYER_INFURA_SECRET!,
+    }),
     fileSystem,
   );
 
   const controller = new Controller(
-    new IpfsCodeStorageProvider(process.env.INFURA_ID!, process.env.INFURA_SECRET!),
+    new IpfsCodeStorageProvider({
+      type: "basic",
+      username: process.env.INFURA_ID!,
+      password: process.env.INFURA_SECRET!,
+    }),
     {
       func:
         process.env.LEGACY_FUNC_COMPILER === "true"

@@ -11,6 +11,13 @@ export type FileUploadSpec = {
   path: string;
   name: string;
 };
+export type IpfsAuth =
+  | {
+    type: "basic";
+    username: string;
+    password: string;
+  }
+  | { type: "custom"; token: "string" };
 
 export interface CodeStorageProvider {
   write(files: FileUploadSpec[], pin: boolean): Promise<CodeLocationPointer[]>;
@@ -22,15 +29,22 @@ export interface CodeStorageProvider {
 export class IpfsCodeStorageProvider implements CodeStorageProvider {
   #client: IPFSHTTPClient;
 
-  constructor(infuraId: string, infuraSecret: string) {
-    const auth = "Basic " + Buffer.from(infuraId + ":" + infuraSecret).toString("base64");
+  constructor(credentials?: IpfsAuth) {
+    const headers = new Headers();
+
+    if (credentials) {
+      const auth =
+        credentials.type == "basic"
+          ? "Basic " +
+          Buffer.from(credentials.username + ":" + credentials.password).toString("base64")
+          : credentials.token;
+      headers.set("Authorization", auth);
+    }
     const url = new URL(process.env.IPFS_API!);
 
     this.#client = create({
       url: url.toString(),
-      headers: {
-        authorization: auth,
-      },
+      headers: Object.fromEntries(headers.entries()),
     });
   }
 
