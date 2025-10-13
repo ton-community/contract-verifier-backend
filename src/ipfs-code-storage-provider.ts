@@ -71,7 +71,7 @@ export class IpfsCodeStorageProvider implements CodeStorageProvider {
 
   async read(pointer: string): Promise<string> {
     return (
-      await fetch(`https://${process.env.IPFS_PROVIDER}/ipfs/${pointer.replace("ipfs://", "")}`)
+      await fetch(`${process.env.IPFS_PROVIDER}/ipfs/${pointer.replace("ipfs://", "")}`)
     ).text();
   }
 }
