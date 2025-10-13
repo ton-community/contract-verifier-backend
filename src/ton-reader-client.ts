@@ -43,9 +43,11 @@ export async function getTonClient(): Promise<LiteClient> {
 
 async function createClient(): Promise<LiteClient> {
   const isTestnet = process.env.NETWORK === "testnet";
-  const configUrl = isTestnet
-    ? "https://ton.org/testnet-global.config.json"
-    : "https://ton.org/global.config.json";
+  const configUrl =
+    process.env.LITESERVER_CONFIG_URL ??
+    (isTestnet
+      ? "https://ton.org/testnet-global.config.json"
+      : "https://ton.org/global.config.json");
 
   console.log("Using config URL:" + configUrl);
 
