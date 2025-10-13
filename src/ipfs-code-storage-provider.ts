@@ -24,9 +24,10 @@ export class IpfsCodeStorageProvider implements CodeStorageProvider {
 
   constructor(infuraId: string, infuraSecret: string) {
     const auth = "Basic " + Buffer.from(infuraId + ":" + infuraSecret).toString("base64");
+    const url = new URL(process.env.IPFS_API!);
 
     this.#client = create({
-      url: "https://ipfs.infura.io:5001/api/v0",
+      url: url.toString(),
       headers: {
         authorization: auth,
       },
