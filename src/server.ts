@@ -136,15 +136,12 @@ app.get("/hc", (req, res) => {
   };
 
   const deployController = new DeployController(
-    new IpfsCodeStorageProvider(
-      process.env.TACT_DEPLOYER_INFURA_ID!,
-      process.env.TACT_DEPLOYER_INFURA_SECRET!,
-    ),
+    new IpfsCodeStorageProvider(process.env.CHAINSTACK_API_KEY!, process.env.CHAINSTACK_BUCKET_ID!),
     fileSystem,
   );
 
   const controller = new Controller(
-    new IpfsCodeStorageProvider(process.env.INFURA_ID!, process.env.INFURA_SECRET!),
+    new IpfsCodeStorageProvider(process.env.CHAINSTACK_API_KEY!, process.env.CHAINSTACK_BUCKET_ID!),
     {
       func:
         process.env.LEGACY_FUNC_COMPILER === "true"
