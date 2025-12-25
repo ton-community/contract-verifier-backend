@@ -41,7 +41,9 @@
     "test": "jest",
     "__prestart": "npm run build",
     "start": "ts-node --transpile-only src/server",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "fetch-cids": "ts-node --transpile-only script/fetch-all-cids.ts",
+    "upload-cids": "ts-node --transpile-only script/upload-cids-to-ipfs.ts"
   },
   "devDependencies": {
     "@types/async": "^3.2.16",
