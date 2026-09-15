@@ -1,3 +1,7 @@
+> [!CAUTION]
+> This verifier version is deprecated. Please use the [new verifier](https://github.com/ton-blockchain/acton/tree/master/apps/verifier)
+> instead.
+
 # contract-verifier-backend
 
 A backend used for compiling FunC code and returning a signed message containing a proof of verification to be forwarded to the [Sources Registry](https://github.com/ton-blockchain/TEPs/pull/91) contract.
