@@ -12,14 +12,10 @@ import mkdirp from "mkdirp";
 import { rmSync } from "fs";
 import path from "path";
 import idMiddleware from "./req-id-middleware";
-import { IpfsCodeStorageProvider } from "./ipfs-code-storage-provider";
+import { requestLoggerMiddleware } from "./request-logger-middleware";
 import rateLimit from "express-rate-limit";
 import { checkPrerequisites } from "./check-prerequisites";
-import { FiftSourceVerifier } from "./source-verifier/fift-source-verifier";
-import {
-  LegacyFuncSourceVerifier,
-  specialCharsRegex,
-} from "./source-verifier/func-source-verifier";
+import { FiftSourceVerifier, specialCharsRegex } from "./source-verifier/fift-source-verifier";
 import { TactSourceVerifier, FileSystem } from "./source-verifier/tact-source-verifier";
 import { TolkSourceVerifier } from "./source-verifier/tolk-source-verifier";
 import { TonReaderClientImpl } from "./ton-reader-client";
@@ -27,11 +23,14 @@ import { getLatestVerified, pollLatestVerified } from "./latest-known-contracts"
 import { DeployController } from "./deploy-controller";
 import { getLogger } from "./logger";
 import { FuncJSSourceVerifier } from "./source-verifier/funcjs-source-verifier";
+import { createCodeStorageProvider } from "./codestorage";
+import { createIndexStorage } from "./indexstorage";
 
 const logger = getLogger("server");
 
 const app = express();
 app.use(idMiddleware());
+app.use(requestLoggerMiddleware());
 app.use(cors());
 app.use(express.json());
 
@@ -136,20 +135,26 @@ app.get("/hc", (req, res) => {
   };
 
   const deployController = new DeployController(
-    new IpfsCodeStorageProvider(
-      process.env.TACT_DEPLOYER_INFURA_ID!,
-      process.env.TACT_DEPLOYER_INFURA_SECRET!,
+    createCodeStorageProvider(
+      process.env.IPFS_STORAGE_PROVIDER,
+      process.env.TACT_DEPLOYER_INFURA_ID,
+      process.env.TACT_DEPLOYER_INFURA_SECRET,
+      process.env.TACT_DEPLOYER_PINATA_JWT,
+      process.env.TACT_DEPLOYER_PINATA_GATEWAY,
     ),
     fileSystem,
   );
 
   const controller = new Controller(
-    new IpfsCodeStorageProvider(process.env.INFURA_ID!, process.env.INFURA_SECRET!),
+    createCodeStorageProvider(
+      process.env.IPFS_STORAGE_PROVIDER,
+      process.env.INFURA_ID,
+      process.env.INFURA_SECRET,
+      process.env.PINATA_JWT,
+      process.env.PINATA_GATEWAY,
+    ),
     {
-      func:
-        process.env.LEGACY_FUNC_COMPILER === "true"
-          ? new LegacyFuncSourceVerifier()
-          : new FuncJSSourceVerifier(),
+      func: new FuncJSSourceVerifier(),
       fift: new FiftSourceVerifier(),
       tolk: new TolkSourceVerifier(),
       tact: new TactSourceVerifier(fileSystem),
@@ -163,8 +168,10 @@ app.get("/hc", (req, res) => {
     new TonReaderClientImpl(),
   );
 
+  const indexStorage = createIndexStorage(process.env.STORAGE_PROVIDER || "valkey");
+
   if (process.env.NODE_ENV === "production")
-    pollLatestVerified(process.env.VERIFIER_ID!, process.env.IPFS_PROVIDER!);
+    pollLatestVerified(indexStorage, process.env.IPFS_PROVIDER!);
 
   app.post(
     "/source",
@@ -175,10 +182,20 @@ app.get("/hc", (req, res) => {
     },
     sourcesUpload.any(),
     async (req, res) => {
+      logger.info("Processing source verification request", {
+        filesCount: (req.files as any[]).length,
+      });
+
       const jsonFile = (req.files! as any[]).find((f) => f.fieldname === "json").path;
 
       const jsonData = await readFile(jsonFile);
       const body = JSON.parse(jsonData.toString());
+
+      logger.debug("Parsed request body", {
+        compiler: body.compiler,
+        sourcesCount: body.sources?.length,
+        knownContractAddress: body.knownContractAddress,
+      });
 
       const result = await controller.addSource({
         compiler: body.compiler,
@@ -195,6 +212,11 @@ app.get("/hc", (req, res) => {
         senderAddress: body.senderAddress,
       });
 
+      logger.info("Source verification request completed", {
+        result: result.compileResult?.result,
+        hash: result.compileResult?.hash,
+      });
+
       res.json(result);
     },
   );
@@ -204,6 +226,8 @@ app.get("/hc", (req, res) => {
       messageCell: req.body.messageCell.data,
       tmpDir: path.join(TMP_DIR, req.id),
     });
+
+    logger.info("Sign request completed successfully");
     res.json(result);
   });
 
@@ -220,9 +244,10 @@ app.get("/hc", (req, res) => {
         const result = await deployController.process({
           tmpDir: path.join(TMP_DIR, req.id),
         });
+        logger.info("Tact deployment request completed successfully");
         res.json(result);
       } catch (e) {
-        logger.error(e);
+        logger.error("Tact deployment request failed", { error: e.toString() });
         res.status(500).send(e.toString());
       }
     },
@@ -231,15 +256,25 @@ app.get("/hc", (req, res) => {
   if (process.env.NODE_ENV === "production") checkPrerequisites();
 
   app.get("/latestVerified", async (req, res) => {
-    res.json(await getLatestVerified());
+    const result = await getLatestVerified(indexStorage);
+    logger.info("Latest verified contracts fetched", {
+      count: result?.length || 0,
+    });
+    res.json(result);
   });
 
   app.use(function (err: any, req: any, res: any, next: any) {
-    logger.error(err); // Log error message in our server's console
-    // We don't want to mutate actuall error message
-    const statusCode = err.statusCode || 500; // If err has no specified error code, set error code to 'Internal Server Error (500)'
+    logger.error("Request error", {
+      error: err,
+      statusCode: err.statusCode || 500,
+      message: err.message || err.toString(),
+      path: req.path,
+      method: req.method,
+    });
+
+    const statusCode = err.statusCode || 500;
     const errorMessage = err.message || err.toString() || "Unknown error";
-    res.status(statusCode).send({ statusCode, message: errorMessage }); // All HTTP requests must have a response, so let's send back an error with its status
+    res.status(statusCode).send({ statusCode, message: errorMessage });
   });
 
   app.listen(port, () => {

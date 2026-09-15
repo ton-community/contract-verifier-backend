@@ -48,8 +48,13 @@ export class TactSourceVerifier implements SourceVerifier {
   }
 
   async verify(payload: SourceVerifyPayload): Promise<CompileResult> {
+    logger.info("Starting Tact verification", {
+      sourcesCount: payload.sources.length,
+    });
+
     try {
       // Sort by depth because we want the original (top-level) pkg file
+      logger.debug("Finding pkg file");
       const pkgFilePath = payload.sources
         .sort((a, b) => {
           const depthA = a.path.split("/").length;
@@ -58,6 +63,7 @@ export class TactSourceVerifier implements SourceVerifier {
         })
         .find((s) => s.path.endsWith(".pkg"))!.path;
 
+      logger.debug("Reading pkg file", { pkgFilePath });
       const pkg = (await this.fileSystem.readFile(path.join(payload.tmpDir, pkgFilePath))).toString(
         "utf8",
       );
@@ -91,10 +97,16 @@ export class TactSourceVerifier implements SourceVerifier {
 
       const output: string[] = [];
 
+      logger.debug("Importing tact compiler module", {
+        version: pkgParsed.compiler.version,
+      });
       const module = await DynamicImporter.tryImport("tact", pkgParsed.compiler.version);
-      console.log("Dynamically imported compiler version");
+      logger.debug("Dynamically imported compiler version", {
+        version: pkgParsed.compiler.version,
+      });
       const verify: typeof VerifyFunctionLegacy | typeof VerifyFunction = module.verify;
 
+      logger.debug("Starting tact compilation");
       let vPromise;
 
       if (this.isLegacyLogger(verify, pkgParsed.compiler.version)) {
@@ -162,17 +174,29 @@ export class TactSourceVerifier implements SourceVerifier {
         .hash()
         .toString("base64");
 
+      const result = compiledHash === payload.knownContractHash ? "similar" : "not_similar";
+
+      logger.info("Tact verification completed", {
+        hash: compiledHash,
+        result,
+        matches: result === "similar",
+        sourcesGenerated: sources.length,
+      });
+
       return {
         compilerSettings,
         error: null,
         hash: compiledHash,
-        result: compiledHash === payload.knownContractHash ? "similar" : "not_similar",
+        result,
         sources: sources.sort(
           ({ filename: filenameA }, { filename: filenameB }) =>
             (filenameA.endsWith(".tact") ? 1 : 0) - (filenameB.endsWith(".tact") ? 1 : 0),
         ),
       };
     } catch (e) {
+      logger.error("Tact verification error", {
+        error: JSON.stringify(e, Object.getOwnPropertyNames(e)),
+      });
       return {
         error: JSON.stringify(e, Object.getOwnPropertyNames(e)),
         hash: null,

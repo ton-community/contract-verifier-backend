@@ -32,26 +32,41 @@ export class TolkSourceVerifier implements SourceVerifier {
     const tolkCompilerOpts: TolkCliCompileSettings =
       payload.compilerSettings as TolkCliCompileSettings;
 
+    logger.info("Starting Tolk verification", {
+      sourcesCount: payload.sources.length,
+      tolkVersion: tolkCompilerOpts.tolkVersion,
+    });
+
     try {
       if (payload.compiler !== "tolk") {
         throw "Invalid compiler type passed as tolk:" + payload.compiler;
       }
 
+      logger.debug("Finding entrypoint");
       const entry = payload.sources.filter((s: TolkSourceToVerify) => s.isEntrypoint);
 
       if (entry.length == 0) {
+        logger.error("No entrypoint found for Tolk verification");
         throw new Error("No entrypoint found");
       }
       if (entry.length > 1) {
+        logger.error("Multiple entrypoints found for Tolk verification", {
+          entrypointsCount: entry.length,
+        });
         throw new Error("Multiple entrypoints found");
       }
 
       const entryPath = path.join(payload.tmpDir, entry[0].path);
+      logger.debug("Entrypoint found", { entryPath: entry[0].path });
 
+      logger.debug("Importing tolk compiler module", {
+        version: tolkCompilerOpts.tolkVersion,
+      });
       const tolkModule = await DynamicImporter.tryImport("tolk", tolkCompilerOpts.tolkVersion);
 
       const tolkCompile: typeof CompileFunction = tolkModule.runTolkCompiler;
 
+      logger.debug("Starting Tolk compilation");
       const compileRes = await timeoutPromise(
         tolkCompile({
           entrypointFileName: entryPath,
@@ -76,6 +91,7 @@ export class TolkSourceVerifier implements SourceVerifier {
       );
 
       if (compileRes.status == "error") {
+        logger.error("Tolk compilation failed", { error: compileRes.message });
         return {
           result: "compile_error",
           error: compileRes.message,
@@ -88,20 +104,29 @@ export class TolkSourceVerifier implements SourceVerifier {
       }
 
       const base64Hash = Buffer.from(compileRes.codeHashHex, "hex").toString("base64");
+      const result = base64Hash === payload.knownContractHash ? "similar" : "not_similar";
+
+      logger.info("Tolk verification completed", {
+        hash: base64Hash,
+        result,
+        matches: result === "similar",
+      });
+
       return {
         hash: base64Hash,
-        result: base64Hash === payload.knownContractHash ? "similar" : "not_similar",
+        result,
         error: null,
         compilerSettings: tolkCompilerOpts,
         sources: payload.sources.map((s: TolkSourceToVerify) => {
           return {
             filename: s.path,
-            isEntrypoint: s.isEntrypoint
+            isEntrypoint: s.isEntrypoint,
           };
         }),
+        compilerOutput: compileRes,
       };
     } catch (e) {
-      logger.error(e);
+      logger.error("Tolk verification error", { error: e.toString() });
       return {
         result: "unknown_error",
         compilerSettings: tolkCompilerOpts,

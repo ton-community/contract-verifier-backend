@@ -23,6 +23,31 @@ declare module "winston" {
 
 const instanceId = randomstring.generate(6);
 
+function bigIntReplacer(_key: string, value: unknown): unknown {
+  return typeof value === "bigint" ? value.toString() : value;
+}
+
+function sanitizeBigInt(obj: unknown): unknown {
+  if (typeof obj === "bigint") {
+    return obj.toString();
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(sanitizeBigInt);
+  }
+  if (obj !== null && typeof obj === "object") {
+    const result: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj)) {
+      result[key] = sanitizeBigInt(value);
+    }
+    return result;
+  }
+  return obj;
+}
+
+const bigIntSanitizer = winston.format((info) => {
+  return sanitizeBigInt(info) as winston.Logform.TransformableInfo;
+});
+
 const customLevels = {
   levels: {
     critical: 0,
@@ -49,7 +74,7 @@ export function getLogger(
 
     if (info.stack) (info.message as any) += info.stack;
 
-    let stringified = JSON.stringify(info.meta);
+    let stringified = JSON.stringify(info.meta, bigIntReplacer);
     delete info.meta;
 
     if (stringified === "{}") stringified = "";
@@ -81,7 +106,7 @@ export function getLogger(
           ? format.printf((info) => {
               return `${info[Symbol.for("message")]}`;
             })
-          : winston.format.json(),
+          : winston.format.combine(bigIntSanitizer(), winston.format.json()),
       }),
     ],
   });
@@ -97,7 +122,7 @@ export function getLogger(
       err.stack = err.stack?.replace(new RegExp(`^\\s+at.*_logger\\.${"error"}.*$\\n`, "m"), "");
       msg = err;
     } else if (!(message instanceof Error) && typeof message === "object") {
-      msg = JSON.stringify(message);
+      msg = JSON.stringify(message, bigIntReplacer);
     }
 
     _logger.log("error", msg as never, ...args);

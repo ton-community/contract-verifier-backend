@@ -12,7 +12,7 @@ import {
 } from "@ton/core";
 
 import { toBigIntBE } from "bigint-buffer";
-import { Sha256 } from "@aws-crypto/sha256-js";
+import { createHash } from "crypto";
 
 export function sourceRegistryConfigToCell(params: {
   minTons: bigint;
@@ -31,9 +31,7 @@ export function sourceRegistryConfigToCell(params: {
 }
 
 export const toSha256Buffer = (s: string) => {
-  const sha = new Sha256();
-  sha.update(s);
-  return Buffer.from(sha.digestSync());
+  return createHash("sha256").update(s).digest();
 };
 
 export class SourcesRegistry implements Contract {

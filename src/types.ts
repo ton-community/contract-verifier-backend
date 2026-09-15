@@ -1,6 +1,5 @@
 export type Compiler = "func" | "fift" | "tolk" | "tact";
-
-import { FuncCompilerVersion } from "@ton-community/contract-verifier-sdk";
+export type FuncCompilerVersion = string;
 
 export interface SourceVerifier {
   verify(payload: SourceVerifyPayload): Promise<CompileResult>;
@@ -50,6 +49,8 @@ export type TactSourceCompileResult = {
   filename: string;
 };
 
+export type CompilerOutput = Record<string, unknown>;
+
 export type CompileResult = {
   result: "similar" | "not_similar" | "compile_error" | "unknown_error";
   error: string | null;
@@ -65,6 +66,7 @@ export type CompileResult = {
     | TolkSourceCompileResult
     | TactSourceCompileResult
   )[];
+  compilerOutput?: CompilerOutput;
 };
 
 type Path = string;
@@ -116,4 +118,5 @@ export type SourceItem = {
     | FiftSourceCompileResult
   ))[];
   knownContractAddress: string;
+  compilerOutputUrl?: string;
 };

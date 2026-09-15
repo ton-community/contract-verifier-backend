@@ -1,4 +1,4 @@
-import { getLogger } from "./logger";
+import { getLogger } from "../logger";
 import admin from "firebase-admin";
 
 // We use this for descending order
@@ -6,17 +6,21 @@ const MAX_TS = 9999999999999;
 
 const logger = getLogger("firebase-provider");
 
-class FirebaseProvider {
-  db: admin.database.Database;
+export class FirebaseProvider {
+  private _db: admin.database.Database | null = null;
 
-  constructor() {
-    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT!);
-    serviceAccount.private_key = serviceAccount.private_key.replaceAll("\\n", "\n");
-    const app = admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-      databaseURL: process.env.FIREBASE_DB_URL,
-    });
-    this.db = app.database();
+  private get db(): admin.database.Database {
+    if (!this._db) {
+      logger.info("Initializing Firebase connection");
+      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT!);
+      serviceAccount.private_key = serviceAccount.private_key.replaceAll("\\n", "\n");
+      const app = admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+        databaseURL: process.env.FIREBASE_DB_URL,
+      });
+      this._db = app.database();
+    }
+    return this._db;
   }
 
   async addForDescendingOrder<T>(key: string, data: T) {
@@ -70,5 +74,3 @@ class FirebaseProvider {
     }
   }
 }
-
-export const firebaseProvider = new FirebaseProvider();

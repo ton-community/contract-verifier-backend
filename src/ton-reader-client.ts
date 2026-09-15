@@ -2,9 +2,11 @@ import { Address, Dictionary, DictionaryValue } from "@ton/core";
 import { toBigIntBE, toBufferBE } from "bigint-buffer";
 import { sha256 } from "./utils";
 import { LiteClient, LiteRoundRobinEngine, LiteSingleEngine } from "ton-lite-client";
-import { ContractVerifier } from "@ton-community/contract-verifier-sdk";
 import { VerifierRegistry } from "./wrappers/verifier-registry";
 import { SourcesRegistry } from "./wrappers/sources-registry";
+import { getLogger } from "./logger";
+
+const logger = getLogger("ton-reader-client");
 
 export type VerifierConfig = {
   verifiers: Buffer[];
@@ -12,7 +14,11 @@ export type VerifierConfig = {
 };
 
 export interface TonReaderClient {
-  isProofDeployed(codeCellHash: string, verifierId: string): Promise<boolean | undefined>;
+  isProofDeployed(
+    codeCellHash: string,
+    verifierId: string,
+    sourcesRegistryAddress: string,
+  ): Promise<boolean | undefined>;
   getVerifierConfig(verifierId: string, verifierRegistryAddress: string): Promise<VerifierConfig>;
 }
 
@@ -29,13 +35,16 @@ let clientPromise: Promise<LiteClient> | null = null;
 
 export async function getTonClient(): Promise<LiteClient> {
   if (clientPromise) {
+    logger.debug("Returning cached TON client");
     return clientPromise;
   }
 
   try {
+    logger.info("Creating new TON client connection");
     clientPromise = createClient();
     return await clientPromise;
   } catch (error) {
+    logger.error("Failed to create TON client", { error });
     clientPromise = null;
     throw error;
   }
@@ -47,17 +56,30 @@ async function createClient(): Promise<LiteClient> {
     ? "https://ton.org/testnet-global.config.json"
     : "https://ton.org/global.config.json";
 
-  console.log("Using config URL:" + configUrl);
+  logger.info("Fetching TON config", {
+    configUrl,
+    network: isTestnet ? "testnet" : "mainnet",
+  });
 
   const response = await fetch(configUrl);
   if (!response.ok) {
+    logger.error("Failed to fetch TON config", {
+      configUrl,
+      status: response.status,
+      statusText: response.statusText,
+    });
     throw new Error(`Failed to fetch TON config: ${response.status}`);
   }
 
   const config = await response.json();
   if (!config.liteservers?.length) {
+    logger.error("No liteservers in config", { configUrl });
     throw new Error("No liteservers found in config");
   }
+
+  logger.debug("Creating lite engines", {
+    liteserversCount: config.liteservers.length,
+  });
 
   const engines: LiteSingleEngine[] = [];
 
@@ -70,6 +92,12 @@ async function createClient(): Promise<LiteClient> {
   }
 
   const engine = new LiteRoundRobinEngine(engines);
+
+  logger.info("TON client created successfully", {
+    liteserversCount: config.liteservers.length,
+    network: isTestnet ? "testnet" : "mainnet",
+  });
+
   return new LiteClient({ engine });
 }
 
@@ -89,6 +117,11 @@ export class TonReaderClientImpl implements TonReaderClient {
     verifierId: string,
     sourcesRegistryAddress: string,
   ): Promise<VerifierConfig> {
+    logger.debug("Getting verifier config", {
+      verifierId,
+      sourcesRegistryAddress,
+    });
+
     const tc = await getTonClient();
 
     const sourcesRegistryContract = tc.open(
@@ -108,16 +141,58 @@ export class TonReaderClientImpl implements TonReaderClient {
       verifierConfig.loadDict(Dictionary.Keys.BigUint(256), createNullValue()).keys(),
     ).map((k) => toBufferBE(k, 32));
 
+    logger.info("Retrieved verifier config", {
+      verifierId,
+      quorum,
+      verifiersCount: verifiers.length,
+    });
+
     return {
       verifiers,
       quorum,
     };
   }
 
-  async isProofDeployed(codeCellHash: string, verifierId: string): Promise<boolean | undefined> {
-    return !!(await ContractVerifier.getSourcesJsonUrl(codeCellHash, {
-      verifier: verifierId,
-      testnet: process.env.NETWORK === "testnet",
-    }));
+  async isProofDeployed(
+    codeCellHash: string,
+    verifierId: string,
+    sourcesRegistryAddress: string,
+  ): Promise<boolean | undefined> {
+    logger.debug("Checking if proof deployed", {
+      codeCellHash,
+      verifierId,
+      sourcesRegistryAddress,
+    });
+
+    try {
+      const tc = await getTonClient();
+      const sourcesRegistryContract = tc.open(
+        SourcesRegistry.createFromAddress(Address.parse(sourcesRegistryAddress)),
+      );
+
+      const sourceItemAddress = await sourcesRegistryContract.getSourceItemAddress(
+        verifierId,
+        codeCellHash,
+      );
+      const sourceItemState = await tc.provider(sourceItemAddress).getState();
+      const isDeployed = sourceItemState.state.type === "active";
+
+      logger.debug("Proof deployment check result", {
+        codeCellHash,
+        verifierId,
+        isDeployed,
+      });
+
+      return isDeployed;
+    } catch (error) {
+      logger.error("Failed to check proof deployment status", {
+        codeCellHash,
+        verifierId,
+        sourcesRegistryAddress,
+        error,
+      });
+
+      return undefined;
+    }
   }
 }

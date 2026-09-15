@@ -89,27 +89,63 @@ get fun initialId(): int {
 }
 `;
 
-jest.mock("../supported-versions-reader", () => ({
-  supportedVersionsReader: {
-    versions: jest.fn(),
-  },
-}));
-
-const versionsMock = supportedVersionsReader.versions as jest.Mock;
+// jest.mock("../supported-versions-reader", () => ({
+//   supportedVersionsReader: {
+//     versions: jest.fn(),
+//   },
+// }));
+//
+// const versionsMock = supportedVersionsReader.versions as jest.Mock;
 
 const importTolk = async (version: string) => {
   return await DynamicImporter.tryImport("tolk", version);
 };
 beforeEach(() => {
-  versionsMock.mockResolvedValue({
+  jest.spyOn(supportedVersionsReader, "versions").mockResolvedValue({
     funcVersions: [],
     tactVersions: [],
-    tolkVersions: ["1.0.0", "1.1.0"],
+    tolkVersions: ["1.0.0", "1.1.0", "1.4.0"],
   });
 });
 
 describe("Tolk source verifier", () => {
-  let tolkVersions = ["1.0.0", "1.1.0"];
+  let tolkVersions = ["1.0.0", "1.1.0", "1.4.0"];
+
+  it("tolk 1.4.0 should pass through abi via compilerOutput", async () => {
+    const sourceName = "counter.tolk";
+    const testSource = counterData + counterMain + counterGetters;
+    const tolkVerifier = new TolkSourceVerifier((path) => {
+      if (path == sourceName) return testSource;
+      throw new Error(`Unknown path: ${path}`);
+    });
+
+    const runTolkCompiler = (await importTolk("1.4.0")).runTolkCompiler;
+    const compileRes = await runTolkCompiler({
+      entrypointFileName: sourceName,
+      fsReadCallback: () => testSource,
+    });
+    if (compileRes.status !== "ok") throw "Failed to compile";
+
+    const resHash = Buffer.from(compileRes.codeHashHex, "hex").toString("base64");
+    const verifyRes = await tolkVerifier.verify({
+      compiler: "tolk",
+      compilerSettings: { tolkVersion: "1.4.0" },
+      knownContractAddress: "",
+      knownContractHash: resHash,
+      senderAddress: "",
+      sources: [{ path: sourceName, isEntrypoint: true } as TolkSourceToVerify],
+      tmpDir: "",
+    });
+
+    expect(verifyRes.result).toEqual("similar");
+    expect(verifyRes.compilerOutput).toBeDefined();
+    const abi = (verifyRes.compilerOutput as any).abiJson;
+    expect(abi).toBeDefined();
+    expect(abi.compiler_name).toEqual("tolk");
+    expect(abi.compiler_version).toEqual("1.4.0");
+    expect(Array.isArray(abi.get_methods)).toBe(true);
+    expect(abi.get_methods.map((m: any) => m.name).sort()).toEqual(["currentCounter", "initialId"]);
+  });
 
   it("tolk should compile and match expected hash", async () => {
     const sourceName = "counter.tolk";

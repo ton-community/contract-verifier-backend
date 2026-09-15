@@ -7,16 +7,8 @@ import { pkg141 } from "./res/tact141pkg";
 import { supportedVersionsReader } from "../supported-versions-reader";
 import { DynamicImporter } from "../dynamic-importer";
 
-jest.mock("../supported-versions-reader", () => ({
-  supportedVersionsReader: {
-    versions: jest.fn(),
-  },
-}));
-
-const versionsMock = supportedVersionsReader.versions as jest.Mock;
-
 beforeEach(() => {
-  versionsMock.mockResolvedValue({
+  jest.spyOn(supportedVersionsReader, "versions").mockResolvedValue({
     funcVersions: [],
     tactVersions: ["1.0.0", "1.4.1", "1.6.2", "1.6.3"],
     tolkVersions: [],

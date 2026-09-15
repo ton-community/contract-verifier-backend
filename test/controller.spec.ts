@@ -1,5 +1,5 @@
 import { Controller } from "../src/controller";
-import { CodeStorageProvider, FileUploadSpec } from "../src/ipfs-code-storage-provider";
+import { CodeStorageProvider, FileUploadSpec } from "../src/codestorage/provider";
 // @ts-ignore
 import { of as ipfsHash } from "ipfs-only-hash";
 import tweetnacl from "tweetnacl";
@@ -9,6 +9,7 @@ import { TonReaderClient, VerifierConfig } from "../src/ton-reader-client";
 import { sha256 } from "../src/utils";
 import Prando from "prando";
 import { FORWARD_MESSAGE_OP, DEPLOY_SOURCE_OP } from "../src/cell-builders";
+import { ToContent } from "ipfs-core-types/src/utils";
 
 function randomAddress(seed: string, workchain: number = 0) {
   const random = new Prando(seed);
@@ -36,6 +37,10 @@ class StubCodeStorageProvider implements CodeStorageProvider {
     });
 
     return hashes;
+  }
+
+  async hashForContent(content: ToContent[]): Promise<string[]> {
+    return Promise.all(content.map((c) => ipfsHash(c)));
   }
 
   async read(pointer: string): Promise<string> {
@@ -80,7 +85,11 @@ class StubTonReaderClient implements TonReaderClient {
       ],
     };
   }
-  async isProofDeployed(codeCellHash: string, verifierId: string): Promise<boolean | undefined> {
+  async isProofDeployed(
+    codeCellHash: string,
+    verifierId: string,
+    sourcesRegistryAddress: string,
+  ): Promise<boolean | undefined> {
     return false;
   }
 }

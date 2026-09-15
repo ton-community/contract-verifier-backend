@@ -12,3 +12,6 @@ secrets-config.json
 *.fc
 release/
 compilers/
+dist/
+parsed_data/
+binaries/
