@@ -60,9 +60,17 @@ export class DynamicImporter {
 
         pendingInstallations[key] = execAsync(
           `npm install ${npmPackage}@${version} --prefix ${installPath}`,
-        ).finally(() => {
-          delete pendingInstallations[key];
-        });
+        )
+          .catch((err) => {
+            const installOutput =
+              `Installation of ${compiler} v${version} failed: ${err.stdout || ""}\n${err.stderr || ""}`.trim();
+            logger.error(installOutput);
+            // Throwing further
+            throw new Error(installOutput);
+          })
+          .finally(() => {
+            delete pendingInstallations[key];
+          });
       } else {
         logger.debug(`Installation for ${key} already in progress`);
       }
