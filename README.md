@@ -3,7 +3,7 @@
 > instead.
 
 # contract-verifier-backend
-
+tab
 A backend used for compiling FunC code and returning a signed message containing a proof of verification to be forwarded to the [Sources Registry](https://github.com/ton-blockchain/TEPs/pull/91) contract.
 The signed message is later stored on a source item contract as a proof that the source code compiles to a specific code cell hash.
 
