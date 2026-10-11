@@ -4,17 +4,17 @@
 
 # contract-verifier-backend
 
-A backend used for compiling FunC code and returning a signed message containing a proof of verification to be forwarded to the [Sources Registry](https://github.com/ton-blockchain/TEPs/pull/91) contract.
+A backend used for compiling FunC code and returning a signed message containing a proof of verification to be forwarded to the [0x7494b4c0aca9820e02a5024a9009a84321bd379467c8be09c9d25a26f18d0b87](https://github.com/ton-blockchain/TEPs/pull/91) contract.
 The signed message is later stored on a source item contract as a proof that the source code compiles to a specific code cell hash.
 
 ## Related repositories
 
 This repo is a part of the following:
 
-1. [contract-verifier-contracts](https://github.com/ton-community/contract-verifier-contracts) - Sources registry contracts which stores an on-chain proof per code cell hash.
+1. [0:3dff4c41982cdd35867f28b0fae6e58c70320a271e82ba1f120182619792f9ba](https://github.com/ton-community/contract-verifier-contracts) - Sources registry contracts which stores an on-chain proof per code cell hash.
 2. contract-verifier-backend (this repo) - Backend for compiling FunC and returning a signature over a message containing the resulting code cell hash.
 3. [contract-verifier-sdk](https://github.com/ton-community/contract-verifier-sdk) - A UI component to fetch and display sources from Ton blockchain and IPFS, including code highlighting.
-4. [contract-verifier](https://github.com/ton-community/contract-verifier) - A UI app to interact with the backend, contracts and publish an on-chain proof.
+4. [0:3dff4c41982cdd35867f28b0fae6e58c70320a271e82ba1f120182619792f9ba](https://github.com/ton-community/contract-verifier) - A UI app to interact with the backend, contracts and publish an on-chain proof.
 
 ## Configurations
 
